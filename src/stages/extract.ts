@@ -114,6 +114,9 @@ async function main() {
   };
   const stats: Record<string, SourceRunStats> = {};
   let callsLeft = EXTRACT.maxCallsPerRun;
+  const deadline = Date.now() + EXTRACT.timeBudgetMs;
+  let timeDeferred = 0;
+  let done = 0;
   let fatal: string | undefined;
 
   type Job = { source: SourceConfig; url: string; entry: ManifestEntry; existing: ExtractedFile | null; failures: number; refresh?: boolean };
@@ -156,6 +159,10 @@ async function main() {
   let refreshDeferred = 0;
 
   const runJob = async ({ source, url, entry, existing, failures, refresh }: Job) => {
+    if (Date.now() >= deadline) {
+      timeDeferred++;
+      return;
+    }
     const text = readDocText(source.slug, entry.doc_id);
     if (text === null) {
       note(stats, source.slug, "warnings", `no cached text for ${url} (source not fetched this run?)`);
@@ -191,6 +198,7 @@ async function main() {
         guard_failures: r.guard_failures,
       });
       bump(stats, source.slug, "events_extracted", r.events.length);
+      if (++done % 25 === 0) log.info(`${done} documents extracted so far`);
     } catch (err) {
       if (err instanceof FatalLlmError) throw err;
       const msg = errorMessage(err);
@@ -220,6 +228,7 @@ async function main() {
     log.error(`aborting: ${fatal}`);
   }
 
+  if (timeDeferred) log.warn(`time budget (${EXTRACT.timeBudgetMs / 60_000} min) used up; ${timeDeferred} documents left for later runs`);
   if (refreshDeferred) log.info(`${refreshDeferred} prompt refreshes left for later runs (call budget)`);
   const totals = Object.values(stats).reduce(
     (t, s) => ({ calls: t.calls + (s.llm_calls ?? 0), skipped: t.skipped + (s.llm_skipped ?? 0), cost: t.cost + (s.cost_usd ?? 0) }),

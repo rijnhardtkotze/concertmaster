@@ -55,6 +55,12 @@ export const EXTRACT = {
   maxAttemptsPerHash: 3,
   /** Hard ceiling on LLM calls per run. Protects against a site that changes every page every day. */
   maxCallsPerRun: Number(process.env.EXTRACT_MAX_CALLS ?? 250),
+  /**
+   * Wall-clock budget for the extract stage. No new document is started after it runs out;
+   * the rest wait for the next run. Keeps the job inside its timeout so the stages after
+   * extract still run and whatever was extracted gets committed.
+   */
+  timeBudgetMs: Number(process.env.EXTRACT_TIME_BUDGET_MIN ?? 30) * 60_000,
   concurrency: 3,
   /** USD per million tokens, for the cost line in the step summary. Keep in sync with the pricing page. */
   pricing: {

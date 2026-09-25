@@ -23,7 +23,10 @@ jobs:
     # Pinned rather than ubuntu-latest: an unattended job shouldn't change OS under us
     # (ubuntu-latest moves to 26.04 from 19 Oct 2026). Bump deliberately.
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # Extract stops starting new documents after EXTRACT_TIME_BUDGET_MIN (30), so a large
+    # backlog is worked off over several runs instead of the job being killed mid-extract
+    # (which cancels merge and the commit, losing the whole run's work).
+    timeout-minutes: 75
     env:
       INGEST_SOURCE: ${{ inputs.source }}
     steps:
