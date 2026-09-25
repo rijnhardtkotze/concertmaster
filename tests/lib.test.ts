@@ -194,3 +194,40 @@ describe("review fixes", async () => {
     expect(warnings.join("\n")).toMatch(/skipped https:\/\/ex.org\/d\/: HTTP 404/); // known but gone: not kept
   });
 });
+
+describe("extraction retries", async () => {
+  const { planExtraction, failureRecord } = await import("../src/stages/extract.ts");
+  const entry = { source: "jpo", doc_id: "d", kind: "html" as const, etag: null, last_modified: null, content_hash: "NEW", raw_hash: null, content_changed_at: "2026-09-02T03:00:00+02:00", last_fetched: "x" };
+  const good = {
+    url: "u", source: "jpo", content_hash: "OLD", fetched_at: "2026-09-01T03:00:00+02:00", status: "ok" as const, attempts: 1,
+    events: [{ title: "Still live" }], guard_failures: [],
+  };
+  const fail = (existing: Parameters<typeof failureRecord>[0], failures: number) =>
+    failureRecord(existing, { url: "u", source: "jpo", entry, error: "529 overloaded", failures, promptVersion: "p" });
+
+  it("keeps the last good extraction live when a changed page fails to extract", () => {
+    expect(planExtraction(good, "NEW").action).toBe("extract");
+    const after = fail(good, 0);
+    expect(after.status).toBe("ok");
+    expect(after.events).toEqual([{ title: "Still live" }]);
+    expect(after.content_hash).toBe("OLD");
+    expect(after.retry).toMatchObject({ content_hash: "NEW", attempts: 1 });
+  });
+
+  it("counts failures per content hash and parks after the limit", () => {
+    let f = fail(good, 0);
+    f = fail(f, planExtraction(f, "NEW").failures);
+    f = fail(f, planExtraction(f, "NEW").failures);
+    expect(planExtraction(f, "NEW")).toEqual({ action: "parked", failures: 3 });
+    expect(f.events).toEqual([{ title: "Still live" }]); // still live while parked
+    expect(planExtraction(f, "NEWER").action).toBe("extract"); // page changed again: try afresh
+    expect(planExtraction(f, "NEW", true).action).toBe("extract"); // --force
+  });
+
+  it("writes an empty error record only when nothing ever succeeded", () => {
+    const f = fail(null, 0);
+    expect(f.status).toBe("error");
+    expect(f.events).toEqual([]);
+    expect(planExtraction({ ...good, retry: undefined }, "OLD").action).toBe("current");
+  });
+});

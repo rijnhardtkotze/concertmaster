@@ -59,6 +59,46 @@ export async function extractDocument(
   return { model, chunks: chunks.length, events, guard_failures };
 }
 
+/**
+ * Skip, retry or park a document. "current": already extracted at this content hash.
+ * "parked": this content hash has failed maxAttemptsPerHash times; left alone until the
+ * page changes again (or --force).
+ */
+export function planExtraction(existing: ExtractedFile | null, contentHash: string, force = false) {
+  const current = existing?.status === "ok" && existing.content_hash === contentHash && !existing.retry;
+  const failures = existing?.retry?.content_hash === contentHash ? existing.retry.attempts : 0;
+  if (force) return { action: "extract" as const, failures };
+  if (current) return { action: "current" as const, failures };
+  if (failures >= EXTRACT.maxAttemptsPerHash) return { action: "parked" as const, failures };
+  return { action: "extract" as const, failures };
+}
+
+/**
+ * What to write when extraction fails. A previous good extraction is kept as-is (its
+ * events stay live) with the failure noted under `retry`; with nothing to keep, an empty
+ * error record is written. Either way the attempt count is tied to this content hash.
+ */
+export function failureRecord(
+  existing: ExtractedFile | null,
+  f: { url: string; source: string; entry: ManifestEntry; error: string; failures: number; promptVersion: string },
+): ExtractedFile {
+  const retry = { content_hash: f.entry.content_hash, attempts: f.failures + 1, error: f.error, at: nowIso() };
+  if (existing?.status === "ok") return { ...existing, retry };
+  return {
+    url: f.url,
+    source: f.source,
+    content_hash: f.entry.content_hash,
+    fetched_at: f.entry.content_changed_at,
+    status: "error",
+    error: f.error,
+    attempts: f.failures + 1,
+    prompt_version: f.promptVersion,
+    events: [],
+    guard_failures: [],
+    retry,
+  };
+}
+
 async function main() {
   const args = parseArgs();
   const sources = await loadSources(args.source);
@@ -74,7 +114,7 @@ async function main() {
   let callsLeft = EXTRACT.maxCallsPerRun;
   let fatal: string | undefined;
 
-  type Job = { source: SourceConfig; url: string; entry: ManifestEntry; existing: ExtractedFile | null };
+  type Job = { source: SourceConfig; url: string; entry: ManifestEntry; existing: ExtractedFile | null; failures: number };
   const jobs: Job[] = [];
   for (const source of sources) {
     stats[source.slug] ??= {};
@@ -83,14 +123,13 @@ async function main() {
       const entry = manifest[url];
       if (!entry) continue;
       const existing = readExtracted(source.slug, entry.doc_id);
-      const sameContent = existing?.content_hash === entry.content_hash;
-      const settled = existing?.status === "ok" || (existing?.attempts ?? 0) >= EXTRACT.maxAttemptsPerHash;
-      if (sameContent && settled && !args.force) {
+      const { action, failures } = planExtraction(existing, entry.content_hash, args.force);
+      if (action !== "extract") {
         bump(stats, source.slug, "llm_skipped");
-        if (existing?.status === "error") note(stats, source.slug, "warnings", `parked after ${existing.attempts} failed attempts: ${url}`);
+        if (action === "parked") note(stats, source.slug, "warnings", `parked after ${failures} failed attempts: ${url}${existing?.status === "ok" ? " (previous extraction still live)" : ""}`);
         continue;
       }
-      jobs.push({ source, url, entry, existing: sameContent ? existing : null });
+      jobs.push({ source, url, entry, existing, failures });
     }
     // Extractions for documents that are no longer part of the source's listing are dropped.
     const dir = path.join(PATHS.extracted, source.slug);
@@ -103,7 +142,7 @@ async function main() {
     }
   }
 
-  const runJob = async ({ source, url, entry, existing }: Job) => {
+  const runJob = async ({ source, url, entry, existing, failures }: Job) => {
     const text = readDocText(source.slug, entry.doc_id);
     if (text === null) {
       note(stats, source.slug, "warnings", `no cached text for ${url} (source not fetched this run?)`);
@@ -128,7 +167,7 @@ async function main() {
         content_hash: entry.content_hash,
         fetched_at: entry.content_changed_at,
         status: "ok",
-        attempts: (existing?.attempts ?? 0) + 1,
+        attempts: failures + 1,
         model: r.model,
         prompt_version: ctx.version,
         extracted_at: nowIso(),
@@ -142,20 +181,10 @@ async function main() {
       const msg = errorMessage(err);
       note(stats, source.slug, "errors", `${url}: ${msg}`);
       log.annotate(`${source.slug}: extraction failed for ${url}: ${msg}`);
-      // Record the failure against this content hash so a permanently broken
-      // document is retried a bounded number of times, not every day forever.
-      writeExtracted(source.slug, entry.doc_id, {
-        url,
-        source: source.slug,
-        content_hash: entry.content_hash,
-        fetched_at: entry.content_changed_at,
-        status: "error",
-        error: msg,
-        attempts: (existing?.attempts ?? 0) + 1,
-        prompt_version: ctx.version,
-        events: [],
-        guard_failures: [],
-      });
+      // Record the failure against this content hash so a permanently broken document is
+      // retried a bounded number of times, not every day forever. A previous good
+      // extraction stays in place (and its events stay live) until a retry succeeds.
+      writeExtracted(source.slug, entry.doc_id, failureRecord(existing, { url, source: source.slug, entry, error: msg, failures, promptVersion: ctx.version }));
     }
   };
 

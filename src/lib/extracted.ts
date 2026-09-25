@@ -16,9 +16,19 @@ export interface ExtractedFile {
   source: string;
   content_hash: string;
   fetched_at: string;
+  /**
+   * "ok": the fields below are the last successful extraction (possibly of an older content
+   * hash, see `retry`). "error": no extraction has ever succeeded for this document.
+   */
   status: "ok" | "error";
   error?: string;
   attempts: number;
+  /**
+   * Set while a newer version of the document (retry.content_hash) keeps failing to extract.
+   * The last good events stay live meanwhile, so a flaky extraction service can't make
+   * published events look withdrawn. Cleared on the next success.
+   */
+  retry?: { content_hash: string; attempts: number; error: string; at: string };
   model?: string;
   prompt_version?: string;
   extracted_at?: string;

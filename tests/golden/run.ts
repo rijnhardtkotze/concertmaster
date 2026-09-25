@@ -8,7 +8,7 @@
  *   pnpm run golden -- --save-baseline  # accept this run as the new baseline
  *
  * Exits non-zero when overall field accuracy drops more than --tolerance (default 0.05)
- * below the baseline, or event recall drops at all. Per-field movement is reported in
+ * below the baseline, or event recall or precision drops at all. Per-field movement is reported in
  * the table but doesn't gate on its own (too few samples per field). With
  * --require-baseline (as in CI) a missing baseline is an error, not a pass.
  */
@@ -161,10 +161,14 @@ async function main() {
   }
   const now = overall(summary.fields);
   const before = overall(baseline.summary.fields);
-  console.log(`golden: overall field accuracy ${pct(now)} (baseline ${pct(before)}), event recall ${pct(e.recall)} (baseline ${pct(baseline.summary.events.recall)})`);
+  console.log(
+    `golden: overall field accuracy ${pct(now)} (baseline ${pct(before)}), event recall ${pct(e.recall)} (baseline ${pct(baseline.summary.events.recall)}), precision ${pct(e.precision)} (baseline ${pct(baseline.summary.events.precision)})`,
+  );
   const failures: string[] = [];
   if (before - now > tolerance) failures.push(`overall accuracy fell from ${pct(before)} to ${pct(now)}`);
   if (e.recall < baseline.summary.events.recall) failures.push(`event recall fell from ${pct(baseline.summary.events.recall)} to ${pct(e.recall)}`);
+  // Extra, invented events don't lower recall or field scores, so precision is gated too.
+  if (e.precision < baseline.summary.events.precision) failures.push(`event precision fell from ${pct(baseline.summary.events.precision)} to ${pct(e.precision)}`);
   if (failures.length) {
     console.error(`golden: regression: ${failures.join("; ")}`);
     process.exit(1);
