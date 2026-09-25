@@ -29,11 +29,12 @@ describe("old-nectar source", async () => {
     expect(text).not.toMatch(/Weddings|Copyright/);
   });
 
-  it("keeps its Quicket listings even when nothing in them matches a classical keyword", () => {
-    const e: QuicketEvent = { id: 1, name: "An afternoon at Old Nectar", url: "https://www.quicket.co.za/events/1-x/", startDate: "2026-10-18T16:00:00", organiser: { id: 40248, name: "Old Nectar Concerts" } };
+  it("keeps its Quicket listings by organiser even when nothing in them matches a classical keyword", () => {
+    // As the API sends it: id 0, no name, the real id only in the organiser page URL.
+    const e: QuicketEvent = { id: 1, name: "An afternoon at Old Nectar", url: "https://www.quicket.co.za/events/1-x/", startDate: "2026-10-18T16:00:00", organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/40248-old-nectar-concerts" } };
     const cfg = quicket.adapter as QuicketAdapterConfig;
     expect(quicketMatches(e, cfg)).toBe(true);
-    expect(quicketMatches({ ...e, organiser: { id: 35300, name: "Old Nectar Concerts" } }, cfg)).toBe(true);
+    expect(quicketMatches({ ...e, organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/402480-someone-else" } }, cfg)).toBe(false);
     expect(quicketMatches({ ...e, organiser: { id: 1, name: "Someone else" } }, cfg)).toBe(false);
   });
 
