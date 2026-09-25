@@ -1,4 +1,4 @@
-import { PATHS, REVIEW_ISSUE_TITLE, REVIEW_SYNC_MARKER, RULES, SOURCE_ISSUE_PREFIX } from "../lib/config.ts";
+import { ISSUE_LABELS, PATHS, REVIEW_ISSUE_TITLE, REVIEW_SYNC_MARKER, RULES, SOURCE_ISSUE_PREFIX } from "../lib/config.ts";
 import { GitHub, runUrl } from "../lib/github.ts";
 import { readJson } from "../lib/json.ts";
 import { errorMessage, logger, redact } from "../lib/log.ts";
@@ -41,7 +41,7 @@ async function main() {
     const pending = new Map([...parseDecisions(review?.body ?? "")].filter(([id]) => !synced.has(id)));
     if (pending.size) log.warn(`${pending.size} review tick(s) not yet recorded; keeping them in the issue`);
     const body = redact(renderReviewIssue(queue, rejects, link, pending));
-    if (!review) log.info(`opened ${(await gh.createIssue(REVIEW_ISSUE_TITLE, body)).html_url}`);
+    if (!review) log.info(`opened ${(await gh.createIssue(REVIEW_ISSUE_TITLE, body, ISSUE_LABELS.reviewQueue)).html_url}`);
     else if (review.body !== body) await gh.updateIssue(review.number, { body });
   } else if (review) {
     await gh.updateIssue(review.number, { body: "Queue is empty. 🎉", state: "closed", state_reason: "completed" });
@@ -67,7 +67,7 @@ async function main() {
         ].join("\n"),
       );
       if (!issue) {
-        log.info(`opened ${(await gh.createIssue(title, body)).html_url}`);
+        log.info(`opened ${(await gh.createIssue(title, body, ISSUE_LABELS.sourceFailing)).html_url}`);
       } else {
         const lastError = /Last error:\n\n```\n([\s\S]*?)\n```/.exec(issue.body ?? "")?.[1];
         if (lastError !== undefined && lastError !== (st.last_error ?? "(none recorded)")) {

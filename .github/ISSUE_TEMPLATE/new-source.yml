@@ -1,0 +1,35 @@
+name: New source
+description: Propose a presenter, venue or ticket vendor to ingest.
+title: "Add source: "
+labels: ["new-source"]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Organisation
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Listing page
+      description: Where they publish upcoming concerts.
+  - type: input
+    id: region
+    attributes:
+      label: City or region
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Contact, platform (WordPress, Wix, Quicket, Webtickets), season, anything that affects scraping.
+  - type: checkboxes
+    id: tasks
+    attributes:
+      label: Integration checklist
+      options:
+        - label: "Recon: listing page, robots.txt, platform, JSON-LD"
+        - label: Reuse an existing vendor source if listings only live there
+        - label: Add `sources/<slug>.ts`
+        - label: Run fetch and extract, check against the live site
+        - label: Check dedupe against existing sources
