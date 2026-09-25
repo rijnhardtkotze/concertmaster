@@ -20,6 +20,7 @@ export default defineSource({
     categories: [],
     keywords: CLASSICAL_KEYWORDS,
     organiserIds: [
+      34873, // Unisa Music Foundation
       36134, // Johannesburg Philharmonic Orchestra
       53944, // Symphony Choir of Johannesburg
       75734, // UFS Odeion School of Music
