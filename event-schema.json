@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://classicalmusic.co.za/schema/event.json",
+  "title": "SA Classical Event",
+  "description": "One performance at one venue at one date and time. A three-night run is three records.",
+  "type": "object",
+  "required": ["id", "dedupe_key", "title", "start", "venue", "source", "confidence", "status"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable slug: sha256(dedupe_key) truncated to 16 hex chars. Never regenerate for an existing event."
+    },
+    "dedupe_key": {
+      "type": "string",
+      "description": "Lowercase, punctuation-stripped: {date_YYYY-MM-DD}|{venue_slug}|{normalised_title_first_6_words}. Used for cross-source matching before fuzzy fallback."
+    },
+
+    "title": { "type": "string", "minLength": 3 },
+    "subtitle": { "type": ["string", "null"] },
+    "description": {
+      "type": ["string", "null"],
+      "description": "Max 400 chars. Summary in own words, NOT copied blurb text. Copyright: never reproduce the publisher's marketing copy verbatim."
+    },
+
+    "start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 with explicit +02:00 offset. South Africa has no DST, so the offset is always +02:00."
+    },
+    "end": { "type": ["string", "null"], "format": "date-time" },
+    "doors": { "type": ["string", "null"], "format": "date-time" },
+    "duration_minutes": { "type": ["integer", "null"], "minimum": 10, "maximum": 600 },
+
+    "venue": {
+      "type": "object",
+      "required": ["name", "city", "province"],
+      "additionalProperties": false,
+      "properties": {
+        "venue_id": { "type": ["string", "null"], "description": "Slug from the canonical venue table, e.g. 'linder-auditorium'." },
+        "name": { "type": "string" },
+        "address": { "type": ["string", "null"] },
+        "city": { "type": "string" },
+        "province": {
+          "type": "string",
+          "enum": ["Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape", "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape"]
+        },
+        "lat": { "type": ["number", "null"] },
+        "lng": { "type": ["number", "null"] }
+      }
+    },
+
+    "presenter": {
+      "type": ["string", "null"],
+      "description": "The organisation putting it on, canonicalised. E.g. 'Johannesburg Philharmonic Orchestra', not 'the JPO'."
+    },
+    "series": {
+      "type": ["string", "null"],
+      "description": "E.g. 'CPO Symphony Season 2026', 'Johannesburg International Mozart Festival 2026'."
+    },
+
+    "performers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": ["conductor", "soloist", "orchestra", "ensemble", "choir", "chorus_master", "director", "narrator", "accompanist", "other"]
+          },
+          "instrument": {
+            "type": ["string", "null"],
+            "description": "For soloists and accompanists. Includes voice types: soprano, mezzo-soprano, contralto, countertenor, tenor, baritone, bass."
+          },
+          "is_south_african": {
+            "type": ["boolean", "null"],
+            "description": "Only true when the source states it or it is unambiguous from a known-artist table. Otherwise null. Do not guess from surname."
+          }
+        }
+      }
+    },
+
+    "programme": {
+      "type": "array",
+      "description": "Works to be performed, in stated order. Empty array is valid and common.",
+      "items": {
+        "type": "object",
+        "required": ["composer", "work"],
+        "additionalProperties": false,
+        "properties": {
+          "composer": {
+            "type": "string",
+            "description": "Canonical full name where confidently known: 'Ludwig van Beethoven', not 'Beethoven'. If ambiguous (e.g. bare 'Bach', 'Strauss'), keep the source form and add to needs_review."
+          },
+          "work": { "type": "string" },
+          "catalogue": { "type": ["string", "null"], "description": "Op. 67, BWV 1043, K. 466, D. 759." },
+          "movements": { "type": ["string", "null"], "description": "If only excerpts are performed." },
+          "is_premiere": {
+            "type": ["string", "null"],
+            "enum": ["world", "african", "south_african", "regional", null]
+          },
+          "arranger": { "type": ["string", "null"] }
+        }
+      }
+    },
+
+    "sa_content": {
+      "type": "object",
+      "description": "The local-is-lekker index. Drives the 'South African works' filter, which is the site's differentiator.",
+      "additionalProperties": false,
+      "properties": {
+        "sa_composers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Composers on the programme matched against the SA composer table. Match only, never infer."
+        },
+        "has_sa_work": { "type": "boolean" },
+        "languages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "For vocal programmes: Afrikaans, isiXhosa, isiZulu, Sesotho, English, German, Italian, Latin, French, Russian, Czech."
+        }
+      }
+    },
+
+    "genre_tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["orchestral", "chamber", "choral", "opera", "solo_recital", "song_recital", "early_music", "contemporary", "organ", "wind_band", "sacred", "youth", "masterclass", "competition", "crossover", "film_music"]
+      }
+    },
+
+    "tickets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": ["string", "null"], "format": "uri" },
+        "vendor": {
+          "type": ["string", "null"],
+          "enum": ["quicket", "webtickets", "computicket", "howler", "direct", "at_door", "other", null]
+        },
+        "currency": { "type": "string", "const": "ZAR" },
+        "price_min": { "type": ["number", "null"], "minimum": 0 },
+        "price_max": { "type": ["number", "null"], "minimum": 0 },
+        "is_free": { "type": ["boolean", "null"] },
+        "concessions_note": { "type": ["string", "null"], "description": "E.g. 'students R80, pensioners R120'." },
+        "booking_required": { "type": ["boolean", "null"] }
+      }
+    },
+
+    "source": {
+      "type": "object",
+      "required": ["url", "publisher", "fetched_at"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string", "format": "uri", "description": "Canonical page for this event. Always link out; never republish full copy." },
+        "publisher": { "type": "string", "description": "Source slug, e.g. 'jpo', 'artscape', 'quicket'." },
+        "fetched_at": { "type": "string", "format": "date-time" },
+        "content_hash": { "type": "string", "description": "sha256 of the raw source document. Skip the LLM call when unchanged." },
+        "secondary_urls": { "type": "array", "items": { "type": "string", "format": "uri" } }
+      }
+    },
+
+    "status": {
+      "type": "string",
+      "enum": ["scheduled", "postponed", "cancelled", "sold_out", "unconfirmed"]
+    },
+
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Extractor's own confidence. Below 0.75 routes to the review queue rather than publishing."
+    },
+    "needs_review": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Dotted field paths the extractor is unsure about, e.g. ['start', 'programme.1.composer']."
+    },
+    "extraction_notes": {
+      "type": ["string", "null"],
+      "description": "One line, for the human reviewer only. Never rendered on the site."
+    },
+
+    "first_seen": { "type": "string", "format": "date-time" },
+    "last_updated": { "type": "string", "format": "date-time" }
+  }
+}
