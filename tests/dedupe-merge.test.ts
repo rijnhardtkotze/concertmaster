@@ -189,6 +189,26 @@ describe("merge", () => {
     expect(r.counts.unconfirmed).toBe(0);
   });
 
+  it("gives both of two retitled nearby performances a prior id when one exists for each", () => {
+    const page = { url: "https://jpo.co.za/season/" };
+    const sym = event({ title: "Spring Symphony", start: "2026-10-15T19:00:00+02:00" }, page);
+    const gala = event({ title: "Spring Gala", start: "2026-10-15T19:30:00+02:00" }, page);
+    const first = merge({ ...base, incoming: dedupe([sym, gala], V, roles).events, published: [] }).published;
+    const idOf = (list: typeof first, title: string) => list.find((e) => e.title === title && e.status !== "unconfirmed")?.id;
+    const [idSym, idGala] = [idOf(first, "Spring Symphony"), idOf(first, "Spring Gala")];
+    // "Spring Symphony Gala" matches both old titles equally and now sits at the Gala's old
+    // time; "Gala" matches only "Spring Gala". Best-pair-first would give the first one the
+    // Gala's id and leave "Gala" with none; the group assignment finds a match for each.
+    const r = merge({
+      ...base,
+      incoming: dedupe([event({ title: "Spring Symphony Gala", start: "2026-10-15T19:30:00+02:00" }, page), event({ title: "Gala", start: "2026-10-15T19:00:00+02:00" }, page)], V, roles).events,
+      published: first,
+    });
+    expect(idOf(r.published, "Spring Symphony Gala")).toBe(idSym);
+    expect(idOf(r.published, "Gala")).toBe(idGala);
+    expect(r.counts.unconfirmed).toBe(0);
+  });
+
   it("counts a pending change to a published event as new review work once, not every run", () => {
     const first = merge({ ...base, incoming: [presenter()], published: [] }).published;
     const shaky = { ...presenter(), confidence: 0.5 };

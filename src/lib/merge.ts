@@ -55,11 +55,12 @@ export function merge(opts: {
   for (const e of opts.published) prior.set(e.id, { event: e, published: true });
 
   // Match every incoming event to its prior record up front, so the result doesn't depend on
-  // input order. Exact ids first. Then fuzzy candidates (same date and venue, within an hour,
-  // similar title) are assigned globally, best title match first, with the nearer start time
-  // breaking ties: when two performances of a show share a title and one disappears (or its
-  // key loses a time suffix), the one left keeps its own id; when a title is edited, it still
-  // finds its own record even if its time moved toward a sibling's.
+  // input order. Exact ids first. Fuzzy candidates (same date and venue, within an hour,
+  // similar title) are then assigned per group of events that compete for the same records,
+  // choosing the assignment that matches the most events, then the best total title
+  // similarity, then the smallest total time difference. So when two performances of a show
+  // share a title and one disappears, the one left keeps its own id (nearer time); when both
+  // are retitled, each still gets a record if one exists for each.
   type Prior = { event: Event; published: boolean };
   const assigned = new Map<Event, Prior>();
   const taken = new Set<string>();
@@ -70,22 +71,25 @@ export function merge(opts: {
       taken.add(e.id);
     }
   }
-  const pairs: { e: Event; p: Prior; score: number; gap: number }[] = [];
+  type Candidate = { p: Prior; score: number; gap: number };
+  const candidates = new Map<Event, Candidate[]>();
   for (const e of opts.incoming) {
     if (assigned.has(e)) continue;
+    const list: Candidate[] = [];
     for (const p of prior.values()) {
       if (taken.has(p.event.id) || localDate(p.event.start) !== localDate(e.start)) continue;
       const gap = Math.abs(Date.parse(p.event.start) - Date.parse(e.start));
       if (gap > 60 * 60_000 || !sameVenue(p.event, e, opts.venues)) continue;
       const score = Math.round(titleSimilarity(p.event.title, e.title) * 100) / 100;
-      if (score >= RULES.fuzzyTitleThreshold) pairs.push({ e, p, score, gap });
+      if (score >= RULES.fuzzyTitleThreshold) list.push({ p, score, gap });
     }
+    if (list.length) candidates.set(e, list.sort((x, y) => y.score - x.score || x.gap - y.gap));
   }
-  pairs.sort((x, y) => y.score - x.score || x.gap - y.gap);
-  for (const { e, p } of pairs) {
-    if (assigned.has(e) || taken.has(p.event.id)) continue;
-    assigned.set(e, p);
-    taken.add(p.event.id);
+  for (const group of competingGroups(candidates)) {
+    for (const [e, p] of assignGroup(group, candidates)) {
+      assigned.set(e, p);
+      taken.add(p.event.id);
+    }
   }
   const matched = new Set<string>();
 
@@ -148,4 +152,79 @@ export function merge(opts: {
   }
 
   return { published: sortEvents(published), queue: sortEvents(queue), counts };
+}
+
+type Assignable<P> = { p: P & { event: Event }; score: number; gap: number };
+
+/** Incoming events linked (directly or through each other) by a shared candidate record. */
+function competingGroups<P extends { event: Event }>(candidates: Map<Event, Assignable<P>[]>): Event[][] {
+  const groups: Event[][] = [];
+  const seen = new Set<Event>();
+  const byPrior = new Map<string, Event[]>();
+  for (const [e, list] of candidates) for (const c of list) byPrior.set(c.p.event.id, [...(byPrior.get(c.p.event.id) ?? []), e]);
+  for (const start of candidates.keys()) {
+    if (seen.has(start)) continue;
+    const group: Event[] = [];
+    const stack = [start];
+    seen.add(start);
+    while (stack.length) {
+      const e = stack.pop()!;
+      group.push(e);
+      for (const c of candidates.get(e)!) {
+        for (const other of byPrior.get(c.p.event.id) ?? []) {
+          if (!seen.has(other)) {
+            seen.add(other);
+            stack.push(other);
+          }
+        }
+      }
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+/**
+ * Best assignment within one group: most matches, then highest total title score, then
+ * lowest total time gap. Groups are one show at one venue on one day, so exhaustive search
+ * is cheap; an unusually large group falls back to best-pair-first.
+ */
+function assignGroup<P extends { event: Event }>(group: Event[], candidates: Map<Event, Assignable<P>[]>): Map<Event, P> {
+  const better = (a: [number, number, number], b: [number, number, number]) => a[0] - b[0] || a[1] - b[1] || b[2] - a[2];
+  if (group.length > 7) {
+    const pairs = group.flatMap((e) => candidates.get(e)!.map((c) => ({ e, ...c })));
+    pairs.sort((x, y) => y.score - x.score || x.gap - y.gap);
+    const out = new Map<Event, P>();
+    const used = new Set<string>();
+    for (const { e, p } of pairs) {
+      if (out.has(e) || used.has(p.event.id)) continue;
+      out.set(e, p);
+      used.add(p.event.id);
+    }
+    return out;
+  }
+  let best: { total: [number, number, number]; picks: (Assignable<P> | null)[] } = { total: [0, 0, 0], picks: group.map(() => null) };
+  const picks: (Assignable<P> | null)[] = [];
+  const used = new Set<string>();
+  const walk = (i: number, total: [number, number, number]) => {
+    if (i === group.length) {
+      if (better(total, best.total) > 0) best = { total, picks: [...picks] };
+      return;
+    }
+    for (const c of candidates.get(group[i]!)!) {
+      if (used.has(c.p.event.id)) continue;
+      used.add(c.p.event.id);
+      picks.push(c);
+      walk(i + 1, [total[0] + 1, Math.round((total[1] + c.score) * 100) / 100, total[2] + c.gap]);
+      picks.pop();
+      used.delete(c.p.event.id);
+    }
+    picks.push(null);
+    walk(i + 1, total);
+    picks.pop();
+  };
+  walk(0, [0, 0, 0]);
+  const out = new Map<Event, P>();
+  best.picks.forEach((c, i) => c && out.set(group[i]!, c.p));
+  return out;
 }
