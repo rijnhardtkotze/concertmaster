@@ -20,16 +20,18 @@ permissions:
 
 jobs:
   ingest:
-    runs-on: ubuntu-latest
+    # Pinned rather than ubuntu-latest: an unattended job shouldn't change OS under us
+    # (ubuntu-latest moves to 26.04 from 19 Oct 2026). Bump deliberately.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       INGEST_SOURCE: ${{ inputs.source }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -39,7 +41,7 @@ jobs:
       # Third-party pages, kept only as a cache so conditional GETs and the
       # copyright guard have something to work with. Never committed.
       - name: Restore raw document cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: data/raw
           key: raw-${{ hashFiles('data/manifest.json') }}
@@ -56,7 +58,7 @@ jobs:
 
       - name: Save raw document cache
         if: ${{ !cancelled() }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: data/raw
           key: raw-${{ hashFiles('data/manifest.json') }}
