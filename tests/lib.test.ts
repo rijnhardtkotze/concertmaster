@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { lastDate, renderQuicketEvent, quicketMatches } from "../src/adapters/quicket.ts";
 import { canonicalUrl } from "../src/adapters/html.ts";
 import { redact } from "../src/lib/log.ts";
@@ -403,5 +403,47 @@ describe("crawl boundaries", async () => {
   it("keeps a Quicket run whose first night has passed but a later performance hasn't", () => {
     const e = { id: 1, name: "x", url: "https://q/", startDate: "2026-01-01T19:00:00", endDate: null, schedules: [{ startDate: "2026-01-01T19:00:00" }, { startDate: "2026-12-01T19:00:00", endDate: "2026-12-01T21:00:00" }] };
     expect(lastDate(e)).toBe(Date.parse("2026-12-01T21:00:00"));
+  });
+});
+
+describe("extract time budget", async () => {
+  const { createBudget, runQueue, extractDocument } = await import("../src/stages/extract.ts");
+
+  it("starts nothing new once the budget expires, but lets in-flight work finish", async () => {
+    let expired = false;
+    const started: number[] = [];
+    const finished: number[] = [];
+    const deferred = await runQueue([1, 2, 3, 4, 5], 2, { expired: () => expired }, async (n) => {
+      started.push(n);
+      await new Promise((r) => setTimeout(r, 5));
+      if (n === 1) expired = true; // budget runs out while 1 and 2 are both in flight
+      finished.push(n);
+    });
+    expect(started).toEqual([1, 2]);
+    expect(finished.sort()).toEqual([1, 2]);
+    expect(deferred).toEqual([3, 4, 5]);
+  });
+
+  it("expires on the clock and aborts overrunning calls after the grace period", async () => {
+    let t = 0;
+    const budget = createBudget(40, 20, () => t);
+    expect(budget.expired()).toBe(false);
+    t = 40;
+    expect(budget.expired()).toBe(true);
+    expect(budget.signal.aborted).toBe(false);
+    await new Promise((r) => setTimeout(r, 80));
+    expect(budget.signal.aborted).toBe(true);
+    budget.dispose();
+  });
+
+  it("makes no further calls for a document once the budget has aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("extract time budget exceeded"));
+    const source = { slug: "t", name: "t", role: "presenter" as const, homepage: "https://ex.org/", adapter: { type: "html" as const, startUrls: ["https://ex.org/"] } };
+    const onCall = vi.fn();
+    await expect(
+      extractDocument({ system: "s", tables: "t", version: "v" }, { source, url: "https://ex.org/a", kind: "html", fetchedAt: "x", text: "hello" }, onCall, controller.signal),
+    ).rejects.toThrow("extract time budget exceeded");
+    expect(onCall).not.toHaveBeenCalled();
   });
 });

@@ -34,6 +34,7 @@ export async function extractDocument(
   ctx: ExtractContext,
   doc: { source: SourceConfig; url: string; kind: ManifestEntry["kind"]; fetchedAt: string; text: string },
   onCall?: (r: Awaited<ReturnType<typeof callExtractor>>) => void,
+  signal?: AbortSignal,
 ) {
   const model = modelFor(doc.source, doc.kind);
   const chunks = chunkText(doc.text, EXTRACT.chunkChars);
@@ -43,7 +44,8 @@ export async function extractDocument(
       { source: doc.source.slug, url: doc.url, fetchedAt: doc.fetchedAt, documentType: doc.kind, hint: doc.source.hint, chunk: { index: i, total: chunks.length } },
       chunks[i]!,
     );
-    const r = await callExtractor({ model, system: ctx.system, tables: ctx.tables, document: block });
+    signal?.throwIfAborted();
+    const r = await callExtractor({ model, system: ctx.system, tables: ctx.tables, document: block, signal });
     onCall?.(r);
     events.push(...(r.events as Record<string, unknown>[]));
   }
@@ -101,6 +103,37 @@ export function failureRecord(
   };
 }
 
+/**
+ * The extract stage's wall-clock budget. Once `expired()`, no new document should start;
+ * `signal` aborts calls still running `graceMs` later, so one slow document can't carry
+ * the stage past the job timeout.
+ */
+export function createBudget(ms: number, graceMs: number, now: () => number = Date.now) {
+  const deadline = now() + ms;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("extract time budget exceeded")), ms + graceMs);
+  timer.unref();
+  return { expired: () => now() >= deadline, signal: controller.signal, dispose: () => clearTimeout(timer) };
+}
+
+/**
+ * Run `run` over `items` with up to `concurrency` in flight. Once the budget has expired,
+ * nothing new starts (work already running finishes). Returns the items never started.
+ */
+export async function runQueue<T>(items: T[], concurrency: number, budget: { expired: () => boolean }, run: (item: T) => Promise<void>): Promise<T[]> {
+  const queue = [...items];
+  const deferred: T[] = [];
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
+      for (let item = queue.shift(); item !== undefined; item = queue.shift()) {
+        if (budget.expired()) deferred.push(item);
+        else await run(item);
+      }
+    }),
+  );
+  return deferred;
+}
+
 async function main() {
   const args = parseArgs();
   const sources = await loadSources(args.source);
@@ -114,7 +147,7 @@ async function main() {
   };
   const stats: Record<string, SourceRunStats> = {};
   let callsLeft = EXTRACT.maxCallsPerRun;
-  const deadline = Date.now() + EXTRACT.timeBudgetMs;
+  const budget = createBudget(EXTRACT.timeBudgetMs, EXTRACT.overrunGraceMs);
   let timeDeferred = 0;
   let done = 0;
   let fatal: string | undefined;
@@ -159,10 +192,6 @@ async function main() {
   let refreshDeferred = 0;
 
   const runJob = async ({ source, url, entry, existing, failures, refresh }: Job) => {
-    if (Date.now() >= deadline) {
-      timeDeferred++;
-      return;
-    }
     const text = readDocText(source.slug, entry.doc_id);
     if (text === null) {
       note(stats, source.slug, "warnings", `no cached text for ${url} (source not fetched this run?)`);
@@ -182,7 +211,7 @@ async function main() {
         bump(stats, source.slug, "input_tokens", call.inputTokens);
         bump(stats, source.slug, "output_tokens", call.outputTokens);
         bump(stats, source.slug, "cost_usd", call.costUsd);
-      });
+      }, budget.signal);
       writeExtracted(source.slug, entry.doc_id, {
         url,
         source: source.slug,
@@ -201,6 +230,12 @@ async function main() {
       if (++done % 25 === 0) log.info(`${done} documents extracted so far`);
     } catch (err) {
       if (err instanceof FatalLlmError) throw err;
+      // Cut off by the time budget: not the document's fault, so no failure is recorded
+      // against it; it is simply extracted by a later run.
+      if (budget.signal.aborted) {
+        timeDeferred++;
+        return;
+      }
       const msg = errorMessage(err);
       note(stats, source.slug, "errors", `${url}: ${msg}`);
       log.annotate(`${source.slug}: extraction failed for ${url}: ${msg}`);
@@ -217,15 +252,12 @@ async function main() {
     if (jobs.length) log.info(`${jobs.length} documents to extract via ${backend === "subscription" ? "Claude subscription (Claude Code)" : "Anthropic API"}`);
     // Subscription usage shares limits with interactive use; go easy on it.
     const concurrency = backend === "subscription" ? 1 : EXTRACT.concurrency;
-    const queue = [...jobs];
-    await Promise.all(
-      Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-        for (let j = queue.shift(); j; j = queue.shift()) await runJob(j);
-      }),
-    );
+    timeDeferred += (await runQueue(jobs, concurrency, budget, runJob)).length;
   } catch (err) {
     fatal = errorMessage(err);
     log.error(`aborting: ${fatal}`);
+  } finally {
+    budget.dispose();
   }
 
   if (timeDeferred) log.warn(`time budget (${EXTRACT.timeBudgetMs / 60_000} min) used up; ${timeDeferred} documents left for later runs`);
