@@ -83,34 +83,51 @@ export class PoliteClient {
     return Math.max(this.minIntervalMs, crawlDelay ? crawlDelay * 1000 : 0);
   }
 
-  private async raw(url: string, headers: Record<string, string>, delayMs: number): Promise<HttpResponse> {
+  private async raw(url: string, headers: Record<string, string>, delayMs: number, redirect: "follow" | "manual" = "follow"): Promise<HttpResponse> {
     const host = new URL(url).host;
     await this.throttle(host, delayMs);
     const res = await fetch(url, {
       headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml,application/json,application/pdf;q=0.9,*/*;q=0.5", ...headers },
-      redirect: "follow",
+      redirect,
       signal: AbortSignal.timeout(FETCH.timeoutMs),
     });
     const len = Number(res.headers.get("content-length") ?? 0);
     if (len > FETCH.maxBytes) throw new HttpError(`response too large (${len} bytes) from ${redact(url)}`, res.status);
     const body = Buffer.from(await res.arrayBuffer());
     if (body.length > FETCH.maxBytes) throw new HttpError(`response too large (${body.length} bytes) from ${redact(url)}`, res.status);
-    return { status: res.status, url: res.url, headers: res.headers, body };
+    return { status: res.status, url: res.url || url, headers: res.headers, body };
   }
 
   /**
-   * GET with robots check, conditional headers and one retry on network error
-   * or 5xx. Returns 304 responses as-is; throws on other non-2xx.
+   * One request, following redirects by hand so that every hop, including a hop to another
+   * origin (a migrated site, a CDN, a ticketing domain), is checked against that origin's
+   * robots.txt and throttled by its own host's rate limit.
+   */
+  private async fetchChecked(url: string, headers: Record<string, string>): Promise<HttpResponse> {
+    let current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      const delay = await this.checkRobots(current);
+      const res = await this.raw(current, headers, delay, "manual");
+      const location = res.headers.get("location");
+      if (![301, 302, 303, 307, 308].includes(res.status) || !location) return { ...res, url: current };
+      current = new URL(location, current).toString();
+    }
+    throw new HttpError(`too many redirects from ${redact(url)}`, 310);
+  }
+
+  /**
+   * GET with robots check (on every redirect hop), conditional headers and one retry on
+   * network error or 5xx. Returns 304 responses as-is; throws on other non-2xx.
    */
   async get(url: string, conditional: { etag?: string | null; lastModified?: string | null } = {}): Promise<HttpResponse> {
-    const delay = await this.checkRobots(url);
+    await this.checkRobots(url); // fail fast, before any request, if the start URL itself is off limits
     const headers: Record<string, string> = {};
     if (conditional.etag) headers["if-none-match"] = conditional.etag;
     if (conditional.lastModified) headers["if-modified-since"] = conditional.lastModified;
     let lastErr: unknown;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const res = await this.raw(url, headers, delay);
+        const res = await this.fetchChecked(url, headers);
         if (res.status === 304 || (res.status >= 200 && res.status < 300)) return res;
         if (res.status >= 500 || res.status === 429) {
           lastErr = new HttpError(`HTTP ${res.status} from ${redact(url)}`, res.status);
@@ -119,6 +136,7 @@ export class PoliteClient {
         }
         throw new HttpError(`HTTP ${res.status} from ${redact(url)}`, res.status);
       } catch (err) {
+        if (err instanceof RobotsDisallowed) throw err;
         if (err instanceof HttpError && err.status < 500 && err.status !== 429) throw err;
         lastErr = err;
         if (attempt === 0) await sleep(5000);

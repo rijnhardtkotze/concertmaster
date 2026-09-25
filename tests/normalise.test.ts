@@ -72,9 +72,9 @@ describe("normaliseEvent", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("drops a description when the source text is unavailable, rather than publishing it unchecked", () => {
+  it("keeps an extract-time-guarded description when the source text is unavailable", () => {
     const r = normaliseEvent(rawEvent(), doc({ text: null }), ctx());
-    expect(r.ok && r.event.description).toBeUndefined();
+    expect(r.ok && r.event.description).toBe("The orchestra plays a symphony.");
   });
 
   it("nulls an over-long description and flags it rather than rejecting the event", () => {

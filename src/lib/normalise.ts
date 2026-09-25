@@ -18,7 +18,7 @@ export interface DocumentInfo {
   source: string;
   fetchedAt: string;
   contentHash: string;
-  /** Source text for the copyright guard. Null if the raw cache is gone. */
+  /** Source text for the copyright re-check. Null if the raw cache is gone (the extract-time guard then stands). */
   text: string | Set<string> | null;
 }
 
@@ -130,16 +130,14 @@ export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContex
   // Description: copyright guard and length.
   if (guardFailure) reasons.push(`copyright guard: ${guardFailure}`);
   if (typeof e.description === "string") {
-    if (doc.text === null) {
-      // Can't prove it isn't copied, so don't publish it.
+    // Re-check against the source text when we have it. Without it (raw cache evicted and
+    // the source not fetched this run) the extract-time guard, which every committed
+    // extraction has already passed, stands, so a cache miss never strips descriptions.
+    const span = doc.text === null ? null : copiedSpan(e.description, doc.text);
+    if (span) reasons.push(`copyright guard: description shares a ${RULES.copyrightSpanWords}-word span with the source ("${span}")`);
+    else if (e.description.length > RULES.descriptionMax) {
       e.description = null;
-    } else {
-      const span = copiedSpan(e.description, doc.text);
-      if (span) reasons.push(`copyright guard: description shares a ${RULES.copyrightSpanWords}-word span with the source ("${span}")`);
-      else if (e.description.length > RULES.descriptionMax) {
-        e.description = null;
-        review.add("description");
-      }
+      review.add("description");
     }
   }
 
