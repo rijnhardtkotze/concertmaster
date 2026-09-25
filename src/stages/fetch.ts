@@ -32,10 +32,14 @@ function makeContext(
   source: SourceConfig,
   stats: Record<string, SourceRunStats>,
   kept: Set<string>,
+  /** The source's live documents after its last run. Only these can be kept. */
+  live: ReadonlySet<string>,
 ): AdapterContext {
   return {
+    // Manifest entries outlive a page's removal from the live set (its extraction is
+    // deleted then), so the manifest alone would revive a withdrawn page from stale cache.
     keepPrevious: (url) => {
-      if (manifest[url]?.source !== source.slug) return false;
+      if (!live.has(url) || manifest[url]?.source !== source.slug) return false;
       kept.add(url);
       return true;
     },
@@ -105,7 +109,7 @@ async function runSource(
     // Check the source's own homepage first so a blanket disallow skips the whole source.
     await client.checkRobots(source.adapter.type === "html" ? source.adapter.startUrls[0]! : source.homepage);
     const kept = new Set<string>();
-    const docs = await adapter(source, makeContext(client, manifest, source, stats, kept));
+    const docs = await adapter(source, makeContext(client, manifest, source, stats, kept, new Set(status.documents)));
     const unique = new Map(docs.map((d) => [d.url, d]));
     if (!unique.size && !kept.size && !source.allowEmpty) {
       throw new Error("0 documents discovered; the listing layout or selector has probably changed");
