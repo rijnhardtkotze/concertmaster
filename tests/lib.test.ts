@@ -226,6 +226,28 @@ describe("review fixes", async () => {
     expect(warnings.join("\n")).toMatch(/skipped https:\/\/ex.org\/c\//);
     expect(warnings.join("\n")).toMatch(/skipped https:\/\/ex.org\/d\/: HTTP 404/); // known but gone: not kept
   });
+
+  it("keeps known detail pages pushed past the fetch cap, defers unknown ones", async () => {
+    const listing = `<main>${["a", "b", "c", "d"].map((x) => `<a class="x" href="/${x}/">${x}</a>`).join("")}</main>`;
+    const kept: string[] = [];
+    const fetched: string[] = [];
+    const ctx = {
+      client: null as never,
+      manifest: {},
+      warn: () => {},
+      keepPrevious: (u: string) => (u.endsWith("/c/") ? (kept.push(u), true) : false),
+      getBody: async (u: string) => {
+        fetched.push(u);
+        const body = Buffer.from(u.endsWith("/list") ? listing : "<main>Concert</main>");
+        return { body, contentType: "text/html", finalUrl: u, etag: null, lastModified: null, notModified: false };
+      },
+    };
+    const source = { slug: "t", name: "t", role: "presenter" as const, homepage: "https://ex.org/", adapter: { type: "html" as const, startUrls: ["https://ex.org/list"], follow: { selector: "a.x", max: 2 } } };
+    const docs = await htmlAdapter(source, ctx);
+    expect(docs.map((d) => d.url)).toEqual(["https://ex.org/a/", "https://ex.org/b/"]);
+    expect(kept).toEqual(["https://ex.org/c/"]);
+    expect(fetched).not.toContain("https://ex.org/c/");
+  });
 });
 
 describe("extraction retries", async () => {

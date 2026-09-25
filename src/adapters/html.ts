@@ -91,7 +91,12 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
 
   if (cfg.follow && !detailUrls.length) ctx.warn(`follow selector "${cfg.follow.selector}" matched no links; layout change or simply nothing listed`);
   const max = cfg.follow?.max ?? FETCH.defaultMaxDocuments;
-  if (detailUrls.length > max) ctx.warn(`${detailUrls.length} detail links found, capped at ${max}`);
+  if (detailUrls.length > max) {
+    // Pages past the cap aren't fetched this run, but the ones we already track are still
+    // listed, so keep their last copy rather than let their events turn unconfirmed.
+    const kept = detailUrls.slice(max).filter((url) => ctx.keepPrevious(url)).length;
+    ctx.warn(`${detailUrls.length} detail links found, capped at ${max}${kept ? `; kept last copy of ${kept} known page(s) past the cap` : ""}`);
+  }
   for (const url of detailUrls.slice(0, max)) {
     try {
       docs.push(await toDocument(url, cfg, ctx));

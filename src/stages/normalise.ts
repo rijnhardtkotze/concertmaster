@@ -34,7 +34,11 @@ async function main() {
       if (!entry) continue;
       const file = readExtracted(source.slug, entry.doc_id);
       if (!file || file.status !== "ok") continue;
-      const text = readDocText(source.slug, entry.doc_id);
+      // The cached text is the latest fetch. If this file is the last good extraction kept
+      // while a newer version fails to extract, that text isn't what it was extracted from:
+      // re-checking against it could reject an event over words only the new page contains.
+      // The extract-time guard, which the kept file passed, stands instead.
+      const text = file.content_hash === entry.content_hash ? readDocText(source.slug, entry.doc_id) : null;
       const doc = {
         url,
         source: source.slug,
