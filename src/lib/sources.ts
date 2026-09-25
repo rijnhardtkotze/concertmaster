@@ -74,6 +74,13 @@ export interface SourceConfig {
   allowEmpty?: boolean;
   /** Free-text hint appended to the document header. Keep it factual: which city, which presenter. */
   hint?: string;
+  /**
+   * The presenter to record when the extractor leaves `presenter` empty. Set it only for a
+   * presenter's own listing, where everything on the site is theirs (the extractor is told
+   * not to infer, so a calendar entry that never names the orchestra comes back null). A
+   * presenter the page does name always wins.
+   */
+  defaultPresenter?: string;
   adapter: HtmlAdapterConfig | QuicketAdapterConfig;
 }
 

@@ -20,6 +20,8 @@ export interface DocumentInfo {
   contentHash: string;
   /** Source text for the copyright re-check. Null if the raw cache is gone (the extract-time guard then stands). */
   text: string | Set<string> | null;
+  /** From the source config: fills `presenter` when the extractor left it empty. */
+  defaultPresenter?: string;
 }
 
 export type NormaliseResult =
@@ -127,6 +129,7 @@ export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContex
   };
 
   e.status ??= "scheduled";
+  if (!e.presenter && doc.defaultPresenter) e.presenter = doc.defaultPresenter;
 
   // Description: copyright guard and length.
   if (guardFailure) reasons.push(`copyright guard: ${guardFailure}`);

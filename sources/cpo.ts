@@ -52,6 +52,7 @@ export default defineSource({
   slug: "cpo",
   name: "Cape Town Philharmonic Orchestra",
   role: "presenter",
+  defaultPresenter: "Cape Town Philharmonic Orchestra",
   homepage: "https://cpo.org.za/",
   hint: "Cape Town Philharmonic Orchestra calendar. Its symphony seasons are at Cape Town City Hall unless the entry says otherwise, but only use a venue the entry itself states.",
   adapter: {

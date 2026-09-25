@@ -11,6 +11,7 @@ export default defineSource({
   slug: "kznpo",
   name: "KwaZulu-Natal Philharmonic Orchestra",
   role: "presenter",
+  defaultPresenter: "KwaZulu-Natal Philharmonic Orchestra",
   homepage: "https://kznphil.org.za/",
   hint: "Website of the KwaZulu-Natal Philharmonic Orchestra (presenter), Durban.",
   adapter: {

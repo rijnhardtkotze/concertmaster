@@ -41,6 +41,7 @@ async function main() {
         fetchedAt: file.fetched_at,
         contentHash: file.content_hash,
         text: text === null ? null : sourceShingles(text),
+        defaultPresenter: source.defaultPresenter,
       };
       const failures = new Map(file.guard_failures.map((g) => [g.index, g.reason]));
       file.events.forEach((raw, i) => {

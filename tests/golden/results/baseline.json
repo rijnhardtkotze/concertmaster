@@ -1,21 +1,22 @@
 {
   "cases": {
     "cpo-echoes-of-vienna": {
-      "mismatches": [
-        "[Echoes of Vienna] presenter: expected \"Cape Town Philharmonic Orchestra\", got null"
-      ],
+      "mismatches": [],
       "raw": [
         {
-          "confidence": 0.96,
-          "description": "Vienna-inspired orchestral program featuring Mozart, Strauss and Richard Strauss. Pianist François du Toit, conducted by Arjan Tien.",
+          "confidence": 0.92,
+          "description": "Orchestral concert featuring works by Mozart, Johann Strauss II, and Richard Strauss, including overtures and suite.",
           "doors": null,
           "duration_minutes": null,
           "end": null,
-          "extraction_notes": "Clear calendar entry. Concert-specific title 'ECHOES OF VIENNA' distinguished from series 'Summer Symphonies at the City Hall'. Venue confirmed from entry title 'at the City Hall'.",
+          "extraction_notes": "Venue inferred from series name 'Summer Symphonies at the City Hall'. Presenter and performing orchestra not explicitly named in entry. No ticket or duration information provided.",
           "genre_tags": [
             "orchestral"
           ],
-          "needs_review": [],
+          "needs_review": [
+            "presenter",
+            "performers"
+          ],
           "performers": [
             {
               "instrument": null,
@@ -67,7 +68,9 @@
           ],
           "sa_content": {
             "has_sa_work": false,
-            "languages": [],
+            "languages": [
+              "English"
+            ],
             "sa_composers": []
           },
           "series": "Summer Symphonies at the City Hall",
@@ -101,26 +104,21 @@
     },
     "jpo-heritage-day": {
       "mismatches": [
-        "[Heritage Day Symphonic Jazz] series: expected null, got \"JPO Symphonic Jazz\"",
-        "[Heritage Day Symphonic Jazz] performers: expected daniel boico|conductor, victor masondo|soloist, lindi ngonelo|soloist; got daniel boico|conductor, victor masondo|soloist, lindi ngonelo|soloist, johannesburg philharmonic orchestra|orchestra"
+        "[Heritage Day Symphonic Jazz] genre_tags: expected orchestral, crossover; got crossover"
       ],
       "raw": [
         {
-          "confidence": 0.9,
-          "description": "The JPO presents its annual symphonic jazz concert, featuring Duke Ellington's Nutcracker Suite and South African jazz artists Victor Masondo and Lindi Ngonelo, with works by Leonard Bernstein and George Gershwin.",
+          "confidence": 0.75,
+          "description": "Symphonic Jazz concert featuring works by Duke Ellington, Leonard Bernstein, George Gershwin, and South African jazz artists Victor Masondo and Lindi Ngonelo, conducted by Daniel Boico.",
           "doors": null,
           "duration_minutes": null,
           "end": null,
-          "extraction_notes": "Programme listing mentions works by Leonard Bernstein and George Gershwin but specific pieces are not identified on the page. Ticket pricing information not provided. Victor Masondo and Lindi Ngonelo are described as South African jazz veterans but are not in the provided SA composer table.",
+          "extraction_notes": "Page lists composers (Leonard Bernstein, George Gershwin, Victor Masondo, Lindi Ngonelo) without specific work titles; only Duke Ellington's Nutcracker Suite is confirmed. Ticket prices not provided. Victor Masondo and Lindi Ngonelo identified as South African artists but not in supplied SA composer table.",
           "genre_tags": [
-            "orchestral",
             "crossover"
           ],
           "needs_review": [
-            "programme",
-            "tickets.price_min",
-            "tickets.price_max",
-            "tickets.is_free"
+            "programme"
           ],
           "performers": [
             {
@@ -160,7 +158,7 @@
             }
           ],
           "sa_content": {
-            "has_sa_work": true,
+            "has_sa_work": false,
             "languages": [
               "English"
             ],
@@ -174,7 +172,7 @@
           "status": "scheduled",
           "subtitle": null,
           "tickets": {
-            "booking_required": true,
+            "booking_required": null,
             "concessions_note": null,
             "is_free": null,
             "price_max": null,
@@ -188,7 +186,7 @@
             "city": "Johannesburg",
             "lat": null,
             "lng": null,
-            "name": "The Linder Auditorium",
+            "name": "Linder Auditorium",
             "province": "Gauteng",
             "venue_id": "linder-auditorium"
           }
@@ -200,7 +198,7 @@
     "claude-haiku-4-5"
   ],
   "prompt_version": "2997e10ca477",
-  "ran_at": "2026-09-25T10:35:21.807Z",
+  "ran_at": "2026-09-25T11:14:46.337Z",
   "summary": {
     "events": {
       "actual": 2,
@@ -216,13 +214,13 @@
         "total": 1
       },
       "genre_tags": {
-        "accuracy": 1,
-        "correct": 2,
+        "accuracy": 0.8333333333333333,
+        "correct": 1.6666666666666665,
         "total": 2
       },
       "performers": {
-        "accuracy": 0.9285714285714286,
-        "correct": 1.8571428571428572,
+        "accuracy": 1,
+        "correct": 2,
         "total": 2
       },
       "performers.instrument": {
@@ -231,8 +229,8 @@
         "total": 1
       },
       "presenter": {
-        "accuracy": 0.5,
-        "correct": 1,
+        "accuracy": 1,
+        "correct": 2,
         "total": 2
       },
       "programme.composer": {
@@ -251,8 +249,8 @@
         "total": 2
       },
       "series": {
-        "accuracy": 0.5,
-        "correct": 1,
+        "accuracy": 1,
+        "correct": 2,
         "total": 2
       },
       "start": {

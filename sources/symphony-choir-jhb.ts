@@ -10,6 +10,7 @@ export default defineSource({
   slug: "symphony-choir-jhb",
   name: "Symphony Choir of Johannesburg",
   role: "presenter",
+  defaultPresenter: "Symphony Choir of Johannesburg",
   homepage: "https://symphonychoirofjohannesburg.co.za/",
   hint: "Website of the Symphony Choir of Johannesburg (presenter).",
   allowEmpty: true,

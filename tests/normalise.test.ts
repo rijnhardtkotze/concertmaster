@@ -112,6 +112,15 @@ describe("normaliseEvent", () => {
     expect(!province.ok && !province.skipped && province.reasons.join()).toMatch(/venue\.province/);
   });
 
+  it("fills an empty presenter from the source's defaultPresenter, never overriding the page", () => {
+    const empty = normaliseEvent(rawEvent({ presenter: null }), doc({ defaultPresenter: "Cape Town Philharmonic Orchestra" }), ctx());
+    expect(empty.ok && empty.event.presenter).toBe("Cape Town Philharmonic Orchestra");
+    const named = normaliseEvent(rawEvent({ presenter: "Guest Promoter" }), doc({ defaultPresenter: "Cape Town Philharmonic Orchestra" }), ctx());
+    expect(named.ok && named.event.presenter).toBe("Guest Promoter");
+    const none = normaliseEvent(rawEvent({ presenter: null }), doc(), ctx());
+    expect(none.ok && none.event.presenter).toBeUndefined();
+  });
+
   it("accepts a per-event source URL only from the document's own site", () => {
     const own = normaliseEvent(rawEvent({ source: { url: "https://www.jpo.co.za/other-concert/" } }), doc(), ctx());
     expect(own.ok && own.event.source.url).toBe("https://www.jpo.co.za/other-concert/");

@@ -10,6 +10,7 @@ export default defineSource({
   slug: "jpo",
   name: "Johannesburg Philharmonic Orchestra",
   role: "presenter",
+  defaultPresenter: "Johannesburg Philharmonic Orchestra",
   homepage: "https://jpo.co.za/",
   hint: "Website of the Johannesburg Philharmonic Orchestra (presenter).",
   adapter: {

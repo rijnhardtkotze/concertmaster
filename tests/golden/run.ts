@@ -93,7 +93,7 @@ async function main() {
       guard = new Map(r.guard_failures.map((g) => [g.index, g.reason]));
     }
 
-    const doc = { url: meta.url, source: meta.source, fetchedAt: meta.fetched_at, contentHash: sha256(text), text: sourceShingles(text) };
+    const doc = { url: meta.url, source: meta.source, fetchedAt: meta.fetched_at, contentHash: sha256(text), text: sourceShingles(text), defaultPresenter: source.defaultPresenter };
     const actual: Event[] = [];
     const notes: string[] = [];
     (raw as Record<string, unknown>[]).forEach((r, i) => {
