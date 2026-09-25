@@ -75,6 +75,11 @@ describe("dedupe", () => {
     expect(dedupe([vendor(), presenter()], V, roles).events[0]!.needs_review).toEqual([]);
   });
 
+  it("a parent review path on a duplicate covers the child fields taken from it", () => {
+    const { events } = dedupe([vendor({ needs_review: ["tickets"] }), presenter()], V, roles);
+    expect(events[0]!.needs_review).toEqual(expect.arrayContaining(["tickets.url", "tickets.price_min"]));
+  });
+
   it("does not fuzzy-merge different concerts at the same venue on the same night", () => {
     const other = event({ title: "Chamber Music Soirée", start: "2026-10-15T19:30:00+02:00" }, { url: "https://jpo.co.za/other/" });
     expect(dedupe([presenter(), other], V, roles).events).toHaveLength(2);

@@ -31,7 +31,10 @@ async function main() {
     // Ticks this run didn't record (review-sync failed, or a box was ticked while the run
     // was going) are carried into the rewritten body. Ticks it did record are not: if that
     // event is still in the queue, its content changed this run and needs a fresh look.
-    const synced = new Set(readJson<{ recorded: string[] }>(REVIEW_SYNC_MARKER, { recorded: [] }).recorded);
+    // Only once the decisions file is safely committed; if merge, the secret scan or the
+    // push failed, the ticks were never saved and must stay in the issue.
+    const committed = process.env.DATA_COMMITTED === "true";
+    const synced = new Set(committed ? readJson<{ recorded: string[] }>(REVIEW_SYNC_MARKER, { recorded: [] }).recorded : []);
     const pending = new Map([...parseDecisions(review?.body ?? "")].filter(([id]) => !synced.has(id)));
     if (pending.size) log.warn(`${pending.size} review tick(s) not yet recorded; keeping them in the issue`);
     const body = redact(renderReviewIssue(queue, rejects, link, pending));

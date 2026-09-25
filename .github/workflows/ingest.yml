@@ -103,13 +103,15 @@ jobs:
         run: pnpm run report
 
       - name: Check for leaked secrets
+        id: secrets
         if: ${{ !cancelled() }}
         run: node scripts/check-secrets.mjs --all
 
       # Only commit a complete run. If merge didn't succeed, nothing is committed and the
       # run is red; the next run starts again from the last good state.
       - name: Commit data
-        if: ${{ !cancelled() && steps.merge.outcome == 'success' }}
+        id: commit
+        if: ${{ !cancelled() && steps.merge.outcome == 'success' && steps.secrets.outcome == 'success' }}
         run: |
           git add data/
           # Timestamps that move on every run don't count as a change.
@@ -128,8 +130,12 @@ jobs:
           done
           exit 1
 
+      # Runs even after a failure so source-failure issues still get opened. Review ticks
+      # recorded this run are only treated as saved if the commit actually went through;
+      # otherwise they're kept in the issue for the next run.
       - name: Update issues
         if: ${{ !cancelled() }}
         run: pnpm run notify
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          DATA_COMMITTED: ${{ steps.commit.outcome == 'success' }}

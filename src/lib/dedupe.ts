@@ -85,7 +85,11 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
     const otherUncertain = other.confidence < RULES.publishConfidence;
     const fill = (field: string) => {
       if (otherUncertain) review.add(field);
-      for (const p of otherReview) if (p === field || p.startsWith(`${field}.`)) review.add(p);
+      // Same path, a child of it, or a parent that covers it ("tickets" covers "tickets.url").
+      for (const p of otherReview) {
+        if (p === field || p.startsWith(`${field}.`)) review.add(p);
+        else if (field.startsWith(`${p}.`)) review.add(field);
+      }
     };
 
     for (const f of FILLABLE) {

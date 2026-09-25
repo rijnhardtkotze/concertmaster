@@ -56,6 +56,12 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 async function main() {
   const args = parseArgs() as ReturnType<typeof parseArgs> & { case?: string; recorded?: boolean; "save-baseline"?: boolean; "require-baseline"?: boolean; tolerance?: string };
   const recorded = args.recorded === true;
+  // Checked before the credential skip, so a PR without secrets (e.g. from a fork) can't
+  // pass with the baseline deleted.
+  if (args["require-baseline"] && !fs.existsSync(BASELINE)) {
+    console.error("golden: no committed baseline (tests/golden/results/baseline.json). Run with --save-baseline and commit it.");
+    process.exit(1);
+  }
   if (!recorded && !hasExtractCredentials()) {
     console.log("golden: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY; skipping live run (use --recorded to re-score the last run).");
     return;
