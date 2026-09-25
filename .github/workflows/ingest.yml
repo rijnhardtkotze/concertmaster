@@ -1,0 +1,121 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # 03:00 SAST
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Run one source only (its slug, e.g. jpo). Leave empty for all."
+        required: false
+        default: ""
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      INGEST_SOURCE: ${{ inputs.source }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Third-party pages, kept only as a cache so conditional GETs and the
+      # copyright guard have something to work with. Never committed.
+      - name: Restore raw document cache
+        uses: actions/cache/restore@v4
+        with:
+          path: data/raw
+          key: raw-${{ hashFiles('data/manifest.json') }}
+          restore-keys: raw-
+
+      # Each stage fails soft per source; a non-zero exit here means something
+      # systemic (bad API key, no credit, a code bug). Later stages still run on
+      # whatever state exists, so one broken stage never loses the others' work.
+      - name: Fetch
+        id: fetch
+        run: pnpm run fetch
+        env:
+          QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
+
+      - name: Save raw document cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@v4
+        with:
+          path: data/raw
+          key: raw-${{ hashFiles('data/manifest.json') }}
+
+      - name: Extract
+        id: extract
+        if: ${{ !cancelled() }}
+        run: pnpm run extract
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Normalise
+        if: ${{ !cancelled() }}
+        run: pnpm run normalise
+
+      - name: Dedupe
+        if: ${{ !cancelled() }}
+        run: pnpm run dedupe
+
+      - name: Read review decisions from the issue
+        if: ${{ !cancelled() }}
+        run: pnpm run review-sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Merge
+        if: ${{ !cancelled() }}
+        run: pnpm run merge
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: pnpm run report
+
+      - name: Check for leaked secrets
+        if: ${{ !cancelled() }}
+        run: node scripts/check-secrets.mjs --all
+
+      - name: Commit data
+        if: ${{ !cancelled() }}
+        run: |
+          git add data/
+          # Timestamps that move on every run don't count as a change.
+          if git diff --cached --quiet -I'"(last_fetched|last_attempt|last_success)":'; then
+            echo "No meaningful data change; skipping commit."
+            git reset -q
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -F .work/commit-message.txt
+          for i in 1 2 3; do
+            git push && exit 0
+            git pull --rebase -q && continue
+            echo "rebase failed"; exit 1
+          done
+          exit 1
+
+      - name: Update issues
+        if: ${{ !cancelled() }}
+        run: pnpm run notify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
