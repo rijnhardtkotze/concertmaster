@@ -80,6 +80,16 @@ describe("dedupe", () => {
     expect(events[0]!.needs_review).toEqual(expect.arrayContaining(["tickets.url", "tickets.price_min"]));
   });
 
+  it("keeps two performances one document lists 30 minutes apart, even with a vendor listing near both", () => {
+    const early = event({ start: "2026-10-15T19:00:00+02:00" });
+    const late = event({ start: "2026-10-15T19:30:00+02:00" });
+    const { events } = dedupe([early, late, vendor({ start: "2026-10-15T19:15:00+02:00" })], V, roles);
+    const jpo = events.filter((e) => [e.source.url, ...(e.source.secondary_urls ?? [])].includes("https://jpo.co.za/spring/"));
+    expect(new Set(events.map((e) => e.id)).size).toBe(events.length);
+    expect(events.filter((e) => e.start.startsWith("2026-10-15T19:00") || e.start.startsWith("2026-10-15T19:30")).length).toBeGreaterThanOrEqual(2);
+    expect(jpo.length).toBe(2);
+  });
+
   it("does not fuzzy-merge different concerts at the same venue on the same night", () => {
     const other = event({ title: "Chamber Music Soirée", start: "2026-10-15T19:30:00+02:00" }, { url: "https://jpo.co.za/other/" });
     expect(dedupe([presenter(), other], V, roles).events).toHaveLength(2);
@@ -139,6 +149,23 @@ describe("merge", () => {
     expect(r.published).toHaveLength(1);
     expect(r.published[0]!.status).toBe("unconfirmed");
     expect(r.counts.unconfirmed).toBe(1);
+  });
+
+  it("leaves unseen events alone when extraction didn't finish", () => {
+    const first = merge({ ...base, incoming: [presenter()], published: [] }).published;
+    const r = merge({ ...base, incoming: [], published: first, extractionComplete: false });
+    expect(r.published[0]!.status).toBe("scheduled");
+    expect(r.counts.unconfirmed).toBe(0);
+  });
+
+  it("counts a pending change to a published event as new review work once, not every run", () => {
+    const first = merge({ ...base, incoming: [presenter()], published: [] }).published;
+    const shaky = { ...presenter(), confidence: 0.5 };
+    const r1 = merge({ ...base, incoming: [shaky], published: first });
+    expect(r1.counts.newlyQueued).toHaveLength(1);
+    const r2 = merge({ ...base, incoming: [shaky], published: r1.published, queue: r1.queue });
+    expect(r2.counts.newlyQueued).toHaveLength(0);
+    expect(r2.queue).toHaveLength(1);
   });
 
   it("keeps the last published version live while a changed version waits for review", () => {

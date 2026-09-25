@@ -3,7 +3,7 @@
 // Anthropic API key. Runs as the pre-commit hook, in PR CI over the whole
 // tree, and in the ingest workflow right before the bot commits.
 //
-//   node scripts/check-secrets.mjs           # staged files (pre-commit)
+//   node scripts/check-secrets.mjs           # staged contents (pre-commit)
 //   node scripts/check-secrets.mjs --all     # every tracked + untracked, non-ignored file
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -19,10 +19,15 @@ const hits = [];
 for (const f of files) {
   let text;
   try {
-    const buf = fs.readFileSync(f);
+    // Pre-commit scans what is staged, not the working tree: a key that was staged and then
+    // removed from the working copy (without re-staging) would still be committed.
+    const buf = all ? fs.readFileSync(f) : execFileSync("git", ["show", `:${f}`], { maxBuffer: 64 * 1024 * 1024 });
     if (buf.includes(0)) continue; // binary
     text = buf.toString("utf8");
-  } catch {
+  } catch (err) {
+    // A staged file we can't read is a scan we can't vouch for: fail closed. With --all a
+    // file removed between listing and reading is simply gone.
+    if (!all) throw err;
     continue;
   }
   const lines = text.split("\n");

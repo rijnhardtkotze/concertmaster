@@ -5,7 +5,7 @@ import { HttpError } from "../lib/http.ts";
 import { errorMessage } from "../lib/log.ts";
 import type { HtmlAdapterConfig, SourceConfig } from "../lib/sources.ts";
 import { htmlToText } from "../lib/text.ts";
-import { canonicalUrl } from "../lib/url.ts";
+import { canonicalUrl, isPublicHost, sameSite } from "../lib/url.ts";
 
 export { canonicalUrl };
 import type { Adapter, AdapterContext, FetchedDocument } from "./types.ts";
@@ -41,6 +41,13 @@ async function toDocument(url: string, cfg: HtmlAdapterConfig, ctx: AdapterConte
  */
 export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterContext) => {
   const cfg = source.adapter as HtmlAdapterConfig;
+  // Links and next-page URLs come from the pages themselves, so they may only lead back to
+  // the source's own sites (its start URLs and homepage), never somewhere a page chooses.
+  const sites = [...cfg.startUrls, source.homepage].map((u) => new URL(u).hostname);
+  const onSite = (u: string) => {
+    const { hostname, protocol } = new URL(u);
+    return /^https?:$/.test(protocol) && isPublicHost(hostname) && sites.some((s) => sameSite(hostname, s));
+  };
   const docs: FetchedDocument[] = [];
   const detailUrls: string[] = [];
   const extractStart = cfg.extractStartPages ?? (!cfg.follow && !cfg.split);
@@ -54,7 +61,18 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
     pages.push(start);
     const r = await ctx.getBody(start);
     const html = r.body.toString("utf8");
-    const next = cfg.nextPage?.(html, start);
+    let next = cfg.nextPage?.(html, start) ?? null;
+    if (next) {
+      try {
+        next = new URL(next, r.finalUrl).toString();
+      } catch {
+        next = null;
+      }
+      if (next && !onSite(next)) {
+        ctx.warn(`ignored next page ${next}: not on ${source.slug}'s own site`);
+        next = null;
+      }
+    }
     if (next && item.depth + 1 < MAX_PAGES) queue.push({ url: next, depth: item.depth + 1, first: item.first });
     else if (next) ctx.warn(`stopped following pages after ${MAX_PAGES} from ${item.first}`);
 
@@ -75,7 +93,7 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
         } catch {
           return;
         }
-        if (!/^https?:/.test(abs)) return;
+        if (!/^https?:/.test(abs) || !onSite(abs)) return;
         if (cfg.follow!.include && !cfg.follow!.include.test(abs)) return;
         if (cfg.follow!.exclude && cfg.follow!.exclude.test(abs)) return;
         if (cfg.follow!.keep && !cfg.follow!.keep($(el).text().replace(/\s+/g, " ").trim())) return;
@@ -89,7 +107,14 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
     }
   }
 
-  if (cfg.follow && !detailUrls.length) ctx.warn(`follow selector "${cfg.follow.selector}" matched no links; layout change or simply nothing listed`);
+  if (cfg.follow && !detailUrls.length) {
+    // Detail pages that were live last run and now vanish all at once look far more like a
+    // broken selector or a bad response than a season ending. Fail the source, which keeps
+    // its last documents (and opens an issue if it persists), instead of withdrawing them.
+    const known = ctx.previousDocuments().filter((u) => !pages.includes(u));
+    if (known.length) throw new Error(`follow selector "${cfg.follow.selector}" matched no links, but ${known.length} detail page(s) were live last run; keeping them`);
+    ctx.warn(`follow selector "${cfg.follow.selector}" matched no links; layout change or simply nothing listed`);
+  }
   const max = cfg.follow?.max ?? FETCH.defaultMaxDocuments;
   if (detailUrls.length > max) {
     // Pages past the cap aren't fetched this run, but the ones we already track are still

@@ -20,7 +20,10 @@ async function main() {
     decisions: readJson<ReviewDecisions>(PATHS.reviewDecisions, {}),
     venues: new VenueIndex(loadVenues()),
     now: now(),
+    // Set by the workflow from the extract step's outcome; absent locally (treated as complete).
+    extractionComplete: process.env.EXTRACT_COMPLETE !== "false",
   });
+  if (process.env.EXTRACT_COMPLETE === "false") log.warn("extraction did not finish this run; events missing from its output are left as they are, not marked unconfirmed");
   writeJson(PATHS.events, published, { sortKeys: false });
   writeJson(PATHS.reviewQueue, queue, { sortKeys: false });
   const { newlyQueued, bySource, ...totals } = counts;

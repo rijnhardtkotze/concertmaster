@@ -28,7 +28,12 @@ const MUSIC_CATEGORIES = /opera|orchestral|classic|choral|a-cappella|concert|mus
 export function splitArtscape(body: string): SplitItem[] {
   const data = JSON.parse(body) as { events: TribeEvent[]; total: number };
   const items: SplitItem[] = [];
-  const decode = (s: string) => cheerio.load(`<p>${s}</p>`)("p").text();
+  // Titles and category names are HTML-escaped strings that may carry stray tags. Parse as a
+  // fragment and take all its text (a line break becomes a space), not just a first element.
+  const decode = (s: string) => {
+    const $ = cheerio.load(s.replace(/<br\s*\/?>/gi, " "), null, false);
+    return $.root().text().replace(/\s+/g, " ").trim();
+  };
   for (const e of data.events ?? []) {
     e.title = decode(e.title);
     const cats = e.categories.map((c) => decode(c.name));

@@ -43,7 +43,8 @@ export function disambiguateKeys(events: Event[]): Event[] {
   for (const group of byKey.values()) {
     const times = new Set(group.map((e) => e.start.slice(11, 16)));
     const spread = Math.max(...group.map((e) => Date.parse(e.start))) - Math.min(...group.map((e) => Date.parse(e.start)));
-    if (times.size > 1 && spread > SAME_PERFORMANCE_MS) {
+    // One document listing the same show at two times means two performances, however close.
+    if (times.size > 1 && (spread > SAME_PERFORMANCE_MS || hasDistinctTimesInOneDocument(group))) {
       for (const e of group) {
         const key = `${dedupeKey(e)}|${e.start.slice(11, 16)}`;
         out.push({ ...e, dedupe_key: key, id: eventId(key) });
@@ -51,6 +52,12 @@ export function disambiguateKeys(events: Event[]): Event[] {
     } else out.push(...group);
   }
   return out;
+}
+
+function hasDistinctTimesInOneDocument(group: Event[]): boolean {
+  const byDoc = new Map<string, Set<string>>();
+  for (const e of group) byDoc.set(e.source.url, (byDoc.get(e.source.url) ?? new Set()).add(e.start));
+  return [...byDoc.values()].some((starts) => starts.size > 1);
 }
 
 /** How much a record says: used to prefer a presenter's detail page over its own listing page. */
@@ -149,15 +156,20 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
  * Union-find that also tracks each cluster's earliest and latest start, so a merge that
  * would stretch a cluster beyond one performance window is refused. Pairwise "within an
  * hour" isn't transitive: 18:00~19:00 and 19:00~20:00 must not make 18:00 and 20:00 one event.
+ * It also refuses a merge that would put two performances one document lists at different
+ * times into one cluster, even through a third record (a vendor listing close to both).
  */
 class PerformanceClusters {
   private parent: number[];
   private lo: number[];
   private hi: number[];
-  constructor(starts: number[]) {
+  /** Per cluster root: document URL → the starts that document contributes. */
+  private docs: Map<string, Set<number>>[];
+  constructor(starts: number[], urls: string[]) {
     this.parent = starts.map((_, i) => i);
     this.lo = [...starts];
     this.hi = [...starts];
+    this.docs = starts.map((t, i) => new Map([[urls[i]!, new Set([t])]]));
   }
   find(i: number): number {
     while (this.parent[i] !== i) i = this.parent[i] = this.parent[this.parent[i]!]!;
@@ -171,6 +183,13 @@ class PerformanceClusters {
     const lo = Math.min(this.lo[ra]!, this.lo[rb]!);
     const hi = Math.max(this.hi[ra]!, this.hi[rb]!);
     if (hi - lo > SAME_PERFORMANCE_MS) return false;
+    const da = this.docs[ra]!;
+    const db = this.docs[rb]!;
+    for (const [url, ts] of da) {
+      const other = db.get(url);
+      if (other && new Set([...ts, ...other]).size > 1) return false;
+    }
+    for (const [url, ts] of da) db.set(url, new Set([...(db.get(url) ?? []), ...ts]));
     this.parent[ra] = rb;
     this.lo[rb] = lo;
     this.hi[rb] = hi;
@@ -186,7 +205,10 @@ class PerformanceClusters {
  */
 export function dedupe(input: Event[], venues: VenueIndex, roles: Record<string, SourceRole>, threshold = RULES.fuzzyTitleThreshold) {
   const events = disambiguateKeys(input);
-  const uf = new PerformanceClusters(events.map((e) => Date.parse(e.start)));
+  const uf = new PerformanceClusters(
+    events.map((e) => Date.parse(e.start)),
+    events.map((e) => e.source.url),
+  );
   const fuzzy: FuzzyMerge[] = [];
 
   const byKey = new Map<string, number[]>();

@@ -43,6 +43,7 @@ function makeContext(
       kept.add(url);
       return true;
     },
+    previousDocuments: () => [...live],
     client,
     manifest,
     warn: (msg) => {

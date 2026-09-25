@@ -60,14 +60,16 @@ export async function extractDocument(
 }
 
 /**
- * Skip, retry or park a document. "current": already extracted at this content hash.
- * "parked": this content hash has failed maxAttemptsPerHash times; left alone until the
- * page changes again (or --force).
+ * Skip, retry or park a document. "current": already extracted at this content hash with
+ * this prompt. "refresh": same content, but extracted under an older prompt; re-extracted
+ * with whatever call budget is left after changed documents. "parked": this content hash
+ * has failed maxAttemptsPerHash times; left alone until the page changes again (or --force).
  */
-export function planExtraction(existing: ExtractedFile | null, contentHash: string, force = false) {
+export function planExtraction(existing: ExtractedFile | null, contentHash: string, force = false, promptVersion?: string) {
   const current = existing?.status === "ok" && existing.content_hash === contentHash && !existing.retry;
   const failures = existing?.retry?.content_hash === contentHash ? existing.retry.attempts : 0;
   if (force) return { action: "extract" as const, failures };
+  if (current && promptVersion && existing.prompt_version !== promptVersion) return { action: "refresh" as const, failures };
   if (current) return { action: "current" as const, failures };
   if (failures >= EXTRACT.maxAttemptsPerHash) return { action: "parked" as const, failures };
   return { action: "extract" as const, failures };
@@ -114,8 +116,9 @@ async function main() {
   let callsLeft = EXTRACT.maxCallsPerRun;
   let fatal: string | undefined;
 
-  type Job = { source: SourceConfig; url: string; entry: ManifestEntry; existing: ExtractedFile | null; failures: number };
+  type Job = { source: SourceConfig; url: string; entry: ManifestEntry; existing: ExtractedFile | null; failures: number; refresh?: boolean };
   const jobs: Job[] = [];
+  const refreshes: Job[] = [];
   for (const source of sources) {
     stats[source.slug] ??= {};
     const live = new Set(status[source.slug]?.documents ?? []);
@@ -123,7 +126,11 @@ async function main() {
       const entry = manifest[url];
       if (!entry) continue;
       const existing = readExtracted(source.slug, entry.doc_id);
-      const { action, failures } = planExtraction(existing, entry.content_hash, args.force);
+      const { action, failures } = planExtraction(existing, entry.content_hash, args.force, ctx.version);
+      if (action === "refresh") {
+        refreshes.push({ source, url, entry, existing, failures, refresh: true });
+        continue;
+      }
       if (action !== "extract") {
         bump(stats, source.slug, "llm_skipped");
         if (action === "parked") note(stats, source.slug, "warnings", `parked after ${failures} failed attempts: ${url}${existing?.status === "ok" ? " (previous extraction still live)" : ""}`);
@@ -142,7 +149,13 @@ async function main() {
     }
   }
 
-  const runJob = async ({ source, url, entry, existing, failures }: Job) => {
+  // Pages whose content changed come first; re-extractions after a prompt edit use what's
+  // left of the call budget, so a prompt change rolls through over a few runs.
+  if (refreshes.length) log.info(`${refreshes.length} unchanged documents were extracted under an older prompt; refreshing as budget allows`);
+  jobs.push(...refreshes);
+  let refreshDeferred = 0;
+
+  const runJob = async ({ source, url, entry, existing, failures, refresh }: Job) => {
     const text = readDocText(source.slug, entry.doc_id);
     if (text === null) {
       note(stats, source.slug, "warnings", `no cached text for ${url} (source not fetched this run?)`);
@@ -150,9 +163,11 @@ async function main() {
     }
     const chunkCount = chunkText(text, EXTRACT.chunkChars).length;
     if (callsLeft < chunkCount) {
-      note(stats, source.slug, "warnings", `LLM call budget for this run exhausted; ${url} deferred`);
+      if (refresh) refreshDeferred++;
+      else note(stats, source.slug, "warnings", `LLM call budget for this run exhausted; ${url} deferred`);
       return;
     }
+    if (refresh) bump(stats, source.slug, "llm_refreshed");
     callsLeft -= chunkCount;
     try {
       const r = await extractDocument(ctx, { source, url, kind: entry.kind, fetchedAt: entry.content_changed_at, text }, (call) => {
@@ -205,6 +220,7 @@ async function main() {
     log.error(`aborting: ${fatal}`);
   }
 
+  if (refreshDeferred) log.info(`${refreshDeferred} prompt refreshes left for later runs (call budget)`);
   const totals = Object.values(stats).reduce(
     (t, s) => ({ calls: t.calls + (s.llm_calls ?? 0), skipped: t.skipped + (s.llm_skipped ?? 0), cost: t.cost + (s.cost_usd ?? 0) }),
     { calls: 0, skipped: 0, cost: 0 },

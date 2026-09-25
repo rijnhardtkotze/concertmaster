@@ -47,8 +47,15 @@ export function merge(opts: {
   decisions: ReviewDecisions;
   venues: VenueIndex;
   now: Date;
+  /**
+   * False when extraction stopped early (expired token, usage limit). Some documents then
+   * have no fresh extraction, so an event missing from today's input may just be unprocessed:
+   * published events are kept as they are instead of being marked unconfirmed.
+   */
+  extractionComplete?: boolean;
 }) {
   const nowIso = toSast(opts.now);
+  const queuedBefore = new Map(opts.queue.map((e) => [e.id, contentFingerprint(e)]));
   const prior = new Map<string, { event: Event; published: boolean }>();
   for (const e of opts.queue) prior.set(e.id, { event: e, published: false });
   for (const e of opts.published) prior.set(e.id, { event: e, published: true });
@@ -108,7 +115,9 @@ export function merge(opts: {
       // version on the site until someone looks, rather than silently vanishing.
       if (p?.published) published.push(p.event);
       count(e, "queued");
-      if (!p || p.published || changed) counts.newlyQueued.push(e.id);
+      // New to the queue, or its content changed since it was queued. A published event's
+      // pending version is in both lists; being published doesn't make it new work each run.
+      if (queuedBefore.get(e.id) !== contentFingerprint(e)) counts.newlyQueued.push(e.id);
       continue;
     }
     if (decision === "approve") counts.approved++;
@@ -120,6 +129,10 @@ export function merge(opts: {
   for (const p of prior.values()) {
     if (matched.has(p.event.id) || !p.published) continue; // vanished queue items are simply dropped
     const e = p.event;
+    if (opts.extractionComplete === false) {
+      published.push(e);
+      continue;
+    }
     if (Date.parse(e.start) > opts.now.getTime() && e.status !== "unconfirmed" && e.status !== "cancelled") {
       published.push(canonicalEvent({ ...e, status: "unconfirmed", last_updated: nowIso }));
       count(e, "unconfirmed");

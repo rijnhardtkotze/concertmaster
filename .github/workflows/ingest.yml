@@ -27,11 +27,11 @@ jobs:
     env:
       INGEST_SOURCE: ${{ inputs.source }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -41,7 +41,7 @@ jobs:
       # Third-party pages, kept only as a cache so conditional GETs and the
       # copyright guard have something to work with. Never committed.
       - name: Restore raw document cache
-        uses: actions/cache/restore@v6
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/raw
           key: raw-${{ hashFiles('data/manifest.json') }}
@@ -58,7 +58,7 @@ jobs:
 
       - name: Save raw document cache
         if: ${{ !cancelled() }}
-        uses: actions/cache/save@v6
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: data/raw
           key: raw-${{ hashFiles('data/manifest.json') }}
@@ -93,10 +93,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # If extraction stopped early (expired token, usage limit), some documents have no fresh
+      # output; merge then leaves events it didn't see alone rather than marking them unconfirmed.
+      # Whatever did get extracted is still committed, so a daily usage limit can't stall progress.
       - name: Merge
         id: merge
         if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
         run: pnpm run merge
+        env:
+          EXTRACT_COMPLETE: ${{ steps.extract.outcome == 'success' }}
 
       - name: Summary
         if: ${{ !cancelled() }}
@@ -130,9 +135,9 @@ jobs:
           done
           exit 1
 
-      # Runs even after a failure so source-failure issues still get opened. Review ticks
-      # recorded this run are only treated as saved if the commit actually went through;
-      # otherwise they're kept in the issue for the next run.
+      # Runs even after a failure so source-failure issues still get opened. The review issue
+      # is only rewritten if the data commit went through; otherwise it's left untouched, so
+      # no reviewer tick is lost with the unsaved decisions.
       - name: Update issues
         if: ${{ !cancelled() }}
         run: pnpm run notify

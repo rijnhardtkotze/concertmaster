@@ -7,10 +7,11 @@
  *   pnpm run golden -- --recorded       # re-score the last live outputs; no API calls
  *   pnpm run golden -- --save-baseline  # accept this run as the new baseline
  *
- * Exits non-zero when overall field accuracy drops more than --tolerance (default 0.05)
- * below the baseline, or event recall or precision drops at all, on two live runs in a row
- * (the first failure triggers one re-run, since extraction isn't deterministic). Per-field movement is reported in
- * the table but doesn't gate on its own (too few samples per field). With
+ * Exits non-zero when, on two live runs in a row (the first failure triggers one re-run,
+ * since extraction isn't deterministic), overall field accuracy drops more than --tolerance
+ * (default 0.05) below the baseline, or title or start accuracy, event recall or event
+ * precision drops at all. Other fields' movement is reported in the table but doesn't gate
+ * on its own (too few samples per field). With
  * --require-baseline (as in CI) a missing baseline is an error, not a pass.
  */
 import fs from "node:fs";
@@ -53,6 +54,7 @@ interface Results {
 }
 
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
+const IDENTITY_FIELDS = ["title", "start"];
 
 async function main() {
   const args = parseArgs() as ReturnType<typeof parseArgs> & { case?: string; recorded?: boolean; "save-baseline"?: boolean; "require-baseline"?: boolean; tolerance?: string };
@@ -129,6 +131,13 @@ async function main() {
     const failures: string[] = [];
     const [a, b] = [overall(base.summary.fields), overall(now.fields)];
     if (a - b > tolerance) failures.push(`overall accuracy fell from ${pct(a)} to ${pct(b)}`);
+    // Identity fields are gated on their own: a concert titled with its series name, or on the
+    // wrong date, is wrong on the site however well the other ~35 checks score.
+    for (const field of IDENTITY_FIELDS) {
+      const was = base.summary.fields[field]?.accuracy;
+      const is = now.fields[field]?.accuracy;
+      if (was !== undefined && is !== undefined && is < was) failures.push(`${field} accuracy fell from ${pct(was)} to ${pct(is)}`);
+    }
     if (now.events.recall < base.summary.events.recall) failures.push(`event recall fell from ${pct(base.summary.events.recall)} to ${pct(now.events.recall)}`);
     // Extra, invented events don't lower recall or field scores, so precision is gated too.
     if (now.events.precision < base.summary.events.precision) failures.push(`event precision fell from ${pct(base.summary.events.precision)} to ${pct(now.events.precision)}`);

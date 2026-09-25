@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { renderQuicketEvent, quicketMatches } from "../src/adapters/quicket.ts";
+import { lastDate, renderQuicketEvent, quicketMatches } from "../src/adapters/quicket.ts";
 import { canonicalUrl } from "../src/adapters/html.ts";
 import { redact } from "../src/lib/log.ts";
 import { loadSystemPrompt, documentBlock } from "../src/lib/prompt.ts";
@@ -210,6 +210,7 @@ describe("review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: (m: string) => warnings.push(m),
+      previousDocuments: () => [],
       keepPrevious: (u: string) => (u.endsWith("/b/") || u.endsWith("/d/") ? (kept.push(u), true) : false),
       getBody: async (u: string) => {
         if (u.endsWith("/b/") || u.endsWith("/c/")) throw new Error("HTTP 503");
@@ -235,6 +236,7 @@ describe("review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: () => {},
+      previousDocuments: () => [],
       keepPrevious: (u: string) => (u.endsWith("/c/") ? (kept.push(u), true) : false),
       getBody: async (u: string) => {
         fetched.push(u);
@@ -269,6 +271,12 @@ describe("extraction retries", async () => {
     expect(after.retry).toMatchObject({ content_hash: "NEW", attempts: 1 });
   });
 
+  it("refreshes an unchanged document extracted under an older prompt", () => {
+    const withPrompt = { ...good, content_hash: "NEW", prompt_version: "p1" };
+    expect(planExtraction(withPrompt, "NEW", false, "p1").action).toBe("current");
+    expect(planExtraction(withPrompt, "NEW", false, "p2").action).toBe("refresh");
+  });
+
   it("counts failures per content hash and parks after the limit", () => {
     let f = fail(good, 0);
     f = fail(f, planExtraction(f, "NEW").failures);
@@ -290,6 +298,13 @@ describe("extraction retries", async () => {
 describe("more review fixes", async () => {
   const { htmlAdapter } = await import("../src/adapters/html.ts");
   const { splitArtscape } = await import("../sources/artscape.ts");
+  it("decodes the whole Artscape title, including text after a stray tag", () => {
+    const ev = (title: string) => ({ title, url: "https://ex.org/e/", description: "", start_date: "2026-12-01 19:00:00", end_date: "2026-12-01 21:00:00", all_day: false, cost: "", website: "", categories: [{ name: "Opera", slug: "opera" }], venue: [], organizer: [] });
+    const title = (t: string) => splitArtscape(JSON.stringify({ events: [ev(t)], total: 1 }))[0]!.text.split("\n")[1];
+    expect(title("Tosca</p> Gala &amp; friends")).toBe("Title: Tosca Gala & friends");
+    expect(title("Carmen<br>in concert")).toBe("Title: Carmen in concert");
+  });
+
   it("follows nextPage until it returns null, fetching each page once", async () => {
     const fetched: string[] = [];
     const page = (n: number, next: string | null) =>
@@ -299,6 +314,7 @@ describe("more review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: () => {},
+      previousDocuments: () => [],
       keepPrevious: () => false,
       getBody: async (u: string) => {
         fetched.push(u);
@@ -322,5 +338,52 @@ describe("more review fixes", async () => {
     ];
     const html = `<div data-events="${JSON.stringify(entries).replace(/"/g, "&quot;")}"></div>`;
     expect(splitCpoCalendar(html, "https://cpo.org.za/concerts/").map((i) => i.text.split("\n")[1])).toEqual(["Title: Future with seconds", "Title: All day"]);
+  });
+});
+
+describe("crawl boundaries", async () => {
+  const { htmlAdapter } = await import("../src/adapters/html.ts");
+  const { isPublicHost } = await import("../src/lib/url.ts");
+  const ctxFor = (bodies: Record<string, string>, previous: string[] = []) => {
+    const fetched: string[] = [];
+    return {
+      fetched,
+      ctx: {
+        client: null as never,
+        manifest: {},
+        warn: () => {},
+        keepPrevious: () => false,
+        previousDocuments: () => previous,
+        getBody: async (u: string) => {
+          fetched.push(u);
+          return { body: Buffer.from(bodies[u] ?? "<main>Concert</main>"), contentType: "text/html", finalUrl: u, etag: null, lastModified: null, notModified: false };
+        },
+      },
+    };
+  };
+  const src = (follow = { selector: "a.x" }) => ({ slug: "t", name: "t", role: "presenter" as const, homepage: "https://ex.org/", adapter: { type: "html" as const, startUrls: ["https://www.ex.org/list"], follow } });
+
+  it("follows only links on the source's own site, never private hosts", async () => {
+    const listing = `<main><a class="x" href="/a/">a</a><a class="x" href="https://evil.example/b/">b</a><a class="x" href="http://127.0.0.1/c/">c</a><a class="x" href="https://tickets.ex.org/d/">d</a></main>`;
+    const { ctx, fetched } = ctxFor({ "https://www.ex.org/list": listing });
+    const docs = await htmlAdapter(src(), ctx);
+    expect(docs.map((d) => d.url)).toEqual(["https://www.ex.org/a/", "https://tickets.ex.org/d/"]);
+    expect(fetched).not.toContain("https://evil.example/b/");
+    expect(isPublicHost("10.0.0.5")).toBe(false);
+    expect(isPublicHost("169.254.169.254")).toBe(false);
+    expect(isPublicHost("localhost")).toBe(false);
+    expect(isPublicHost("jpo.co.za")).toBe(true);
+  });
+
+  it("fails the source instead of withdrawing its pages when a listing suddenly matches nothing", async () => {
+    const { ctx } = ctxFor({ "https://www.ex.org/list": "<main>maintenance</main>" }, ["https://www.ex.org/a/"]);
+    await expect(htmlAdapter(src(), ctx)).rejects.toThrow(/matched no links, but 1 detail page/);
+    const fresh = ctxFor({ "https://www.ex.org/list": "<main>nothing yet</main>" });
+    await expect(htmlAdapter(src(), fresh.ctx)).resolves.toEqual([]);
+  });
+
+  it("keeps a Quicket run whose first night has passed but a later performance hasn't", () => {
+    const e = { id: 1, name: "x", url: "https://q/", startDate: "2026-01-01T19:00:00", endDate: null, schedules: [{ startDate: "2026-01-01T19:00:00" }, { startDate: "2026-12-01T19:00:00", endDate: "2026-12-01T21:00:00" }] };
+    expect(lastDate(e)).toBe(Date.parse("2026-12-01T21:00:00"));
   });
 });

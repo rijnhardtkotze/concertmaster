@@ -1,6 +1,7 @@
 import robotsParserModule from "robots-parser";
 import { BOT_TOKEN, FETCH, USER_AGENT } from "./config.ts";
 import { redact } from "./log.ts";
+import { isPublicHost } from "./url.ts";
 
 export class RobotsDisallowed extends Error {}
 export class HttpError extends Error {
@@ -40,6 +41,8 @@ export class PoliteClient {
   constructor(
     private readonly minIntervalMs = FETCH.minIntervalMs,
     private readonly maxBytes = FETCH.maxBytes,
+    /** Tests only: allow localhost servers. The crawler never talks to private addresses. */
+    private readonly allowPrivateHosts = false,
   ) {}
 
   private async throttle(host: string, delayMs: number) {
@@ -78,7 +81,9 @@ export class PoliteClient {
 
   /** Throws RobotsDisallowed if robots.txt forbids the URL or can't be read. */
   async checkRobots(url: string): Promise<number> {
-    const { origin } = new URL(url);
+    const { origin, hostname } = new URL(url);
+    // Checked here because every request, including each redirect hop, passes through.
+    if (!this.allowPrivateHosts && !isPublicHost(hostname)) throw new HttpError(`refusing to fetch non-public host ${hostname}`, 403);
     const robots = await this.loadRobots(origin);
     if ("unreachable" in robots) throw new RobotsDisallowed(`robots.txt for ${origin} unreachable (${robots.unreachable}); failing closed`);
     if (robots.isAllowed(url, BOT_TOKEN) === false) throw new RobotsDisallowed(`robots.txt disallows ${redact(url)} for ${BOT_TOKEN}`);

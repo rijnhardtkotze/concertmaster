@@ -48,21 +48,21 @@ afterAll(() => {
 
 describe("PoliteClient redirects", () => {
   it("checks the destination origin's robots.txt before following a cross-origin redirect", async () => {
-    const client = new PoliteClient(0);
+    const client = new PoliteClient(0, undefined, true);
     await expect(client.get(`${aUrl}/moved`)).rejects.toBeInstanceOf(RobotsDisallowed);
     expect(hits).toContain("b/robots.txt");
     expect(hits).not.toContain("b/private/page");
   });
 
   it("follows an allowed cross-origin redirect and reports the final URL", async () => {
-    const res = await new PoliteClient(0).get(`${aUrl}/fine`);
+    const res = await new PoliteClient(0, undefined, true).get(`${aUrl}/fine`);
     expect(res.status).toBe(200);
     expect(res.url).toBe(`${bUrl}/public`);
     expect(res.body.toString()).toContain("ok");
   });
 
   it("stops reading at the size cap even without a Content-Length header", async () => {
-    const client = new PoliteClient(0, 256 * 1024);
+    const client = new PoliteClient(0, 256 * 1024, true);
     await expect(client.get(`${aUrl}/huge`)).rejects.toThrow(/too large/);
   });
 });

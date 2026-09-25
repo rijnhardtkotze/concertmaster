@@ -27,14 +27,17 @@ async function main() {
   const queue = readJson<Event[]>(PATHS.reviewQueue, []);
   const rejects = readJson<Reject[]>(PATHS.rejects, []);
   const review = open.find((i) => i.title === REVIEW_ISSUE_TITLE);
-  if (queue.length || rejects.length) {
+  const committed = process.env.DATA_COMMITTED === "true";
+  if (!committed) {
+    // The local queue reflects decisions that were never saved: rendering from it would drop
+    // those events' ticks (or close the issue) and lose the reviewer's choices. Leave the
+    // issue exactly as it is; the next successful run re-reads it.
+    log.warn("data was not committed this run; leaving the review issue unchanged");
+  } else if (queue.length || rejects.length) {
     // Ticks this run didn't record (review-sync failed, or a box was ticked while the run
     // was going) are carried into the rewritten body. Ticks it did record are not: if that
     // event is still in the queue, its content changed this run and needs a fresh look.
-    // Only once the decisions file is safely committed; if merge, the secret scan or the
-    // push failed, the ticks were never saved and must stay in the issue.
-    const committed = process.env.DATA_COMMITTED === "true";
-    const synced = new Set(committed ? readJson<{ recorded: string[] }>(REVIEW_SYNC_MARKER, { recorded: [] }).recorded : []);
+    const synced = new Set(readJson<{ recorded: string[] }>(REVIEW_SYNC_MARKER, { recorded: [] }).recorded);
     const pending = new Map([...parseDecisions(review?.body ?? "")].filter(([id]) => !synced.has(id)));
     if (pending.size) log.warn(`${pending.size} review tick(s) not yet recorded; keeping them in the issue`);
     const body = redact(renderReviewIssue(queue, rejects, link, pending));

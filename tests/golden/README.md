@@ -5,11 +5,16 @@ The harness reports **per-field accuracy** and the change against the committed
 baseline, so you can see whether a prompt edit helped or just moved the errors around.
 
 ```sh
-pnpm run golden                     # live, needs ANTHROPIC_API_KEY (a few cents)
+pnpm run golden                     # live, needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY
 pnpm run golden -- --case cpo-echoes-of-vienna
 pnpm run golden -- --recorded       # re-score the last live run; no API calls
 pnpm run golden -- --save-baseline  # accept the current run as the baseline
 ```
+
+In CI (`golden -- --require-baseline`) the job fails when overall accuracy drops more
+than 5 points below the baseline, or title accuracy, start accuracy, event recall or
+event precision drops at all. Extraction isn't deterministic, so a run that trips the
+gate is re-run once and only fails if the second run trips it too.
 
 ## Adding a case
 

@@ -65,6 +65,8 @@ export interface SourceRunStats {
   documents_changed?: number;
   llm_calls?: number;
   llm_skipped?: number;
+  /** Unchanged documents re-extracted because the prompt changed. */
+  llm_refreshed?: number;
   input_tokens?: number;
   output_tokens?: number;
   cost_usd?: number;

@@ -63,6 +63,17 @@ export function renderQuicketEvent(e: QuicketEvent): string {
   return lines.join("\n").trim() + "\n";
 }
 
+/**
+ * Latest date the listing covers: its own end/start and every separately dated
+ * performance. A run whose first night has passed can still have shows to come.
+ */
+export function lastDate(e: QuicketEvent): number | null {
+  const dates = [e.endDate, e.startDate, ...(e.schedules ?? []).flatMap((s) => [s.endDate, s.startDate])]
+    .map((d) => (d ? Date.parse(d) : NaN))
+    .filter(Number.isFinite);
+  return dates.length ? Math.max(...dates) : null;
+}
+
 export function quicketMatches(e: QuicketEvent, cfg: QuicketAdapterConfig): boolean {
   if (e.organiser?.id && cfg.organiserIds?.includes(e.organiser.id)) return true;
   const hay = [e.name, e.description ?? "", e.organiser?.name ?? "", ...(e.categories ?? []).map((c) => c.name), e.venue?.name ?? ""].join(" ");
@@ -89,8 +100,8 @@ export const quicketAdapter: Adapter = async (source: SourceConfig, ctx) => {
     const data = JSON.parse(res.body.toString("utf8")) as ListResult;
     for (const e of data.results ?? []) {
       seen++;
-      const end = Date.parse(e.endDate ?? e.startDate);
-      if (Number.isFinite(end) && end < cutoff) continue;
+      const end = lastDate(e);
+      if (end !== null && end < cutoff) continue;
       if (!quicketMatches(e, cfg)) continue;
       docs.push({ url: canonicalUrl(e.url), kind: "json", text: renderQuicketEvent(e) });
     }
