@@ -158,3 +158,39 @@ describe("extraction backend", async () => {
     withEnv({ CLAUDE_CODE_OAUTH_TOKEN: undefined, ANTHROPIC_API_KEY: undefined, EXTRACT_BACKEND: undefined }, () => expect(() => extractBackend()).toThrow(/credentials/));
   });
 });
+
+describe("review fixes", async () => {
+  const { htmlAdapter } = await import("../src/adapters/html.ts");
+  const { HttpError } = await import("../src/lib/http.ts");
+  it("rejects impossible calendar dates instead of rolling them over", () => {
+    expect(normaliseTimestamp("2026-02-30T19:00")).toBeNull();
+    expect(normaliseTimestamp("2026-04-31")).toBeNull();
+    expect(normaliseTimestamp("2026-04-03T24:30")).toBeNull();
+    expect(normaliseTimestamp("2028-02-29T19:00")).toBe("2028-02-29T19:00:00+02:00");
+  });
+
+  it("keeps a known detail page in the live set when its refresh fails, skips an unknown one", async () => {
+    const listing = `<main><a class="x" href="/a/">A</a><a class="x" href="/b/">B</a><a class="x" href="/c/">C</a><a class="x" href="/d/">D</a></main>`;
+    const kept: string[] = [];
+    const warnings: string[] = [];
+    const ctx = {
+      client: null as never,
+      manifest: {},
+      warn: (m: string) => warnings.push(m),
+      keepPrevious: (u: string) => (u.endsWith("/b/") || u.endsWith("/d/") ? (kept.push(u), true) : false),
+      getBody: async (u: string) => {
+        if (u.endsWith("/b/") || u.endsWith("/c/")) throw new Error("HTTP 503");
+        if (u.endsWith("/d/")) throw new HttpError("HTTP 404", 404);
+        const body = Buffer.from(u.endsWith("/list") ? listing : "<main>Concert A</main>");
+        return { body, contentType: "text/html", finalUrl: u, etag: null, lastModified: null, notModified: false };
+      },
+    };
+    const source = { slug: "t", name: "t", role: "presenter" as const, homepage: "https://ex.org/", adapter: { type: "html" as const, startUrls: ["https://ex.org/list"], follow: { selector: "a.x" } } };
+    const docs = await htmlAdapter(source, ctx);
+    expect(docs.map((d) => d.url)).toEqual(["https://ex.org/a/"]);
+    expect(kept).toEqual(["https://ex.org/b/"]);
+    expect(warnings.join("\n")).toMatch(/kept last copy of https:\/\/ex.org\/b\//);
+    expect(warnings.join("\n")).toMatch(/skipped https:\/\/ex.org\/c\//);
+    expect(warnings.join("\n")).toMatch(/skipped https:\/\/ex.org\/d\/: HTTP 404/); // known but gone: not kept
+  });
+});

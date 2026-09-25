@@ -7,9 +7,10 @@
  *   pnpm run golden -- --recorded       # re-score the last live outputs; no API calls
  *   pnpm run golden -- --save-baseline  # accept this run as the new baseline
  *
- * Exits non-zero only on a regression beyond --tolerance (default 0.05) in any field,
- * or on event recall dropping, so a prompt edit that moves errors around is visible
- * in the table but doesn't block a PR by itself.
+ * Exits non-zero when overall field accuracy drops more than --tolerance (default 0.05)
+ * below the baseline, or event recall drops at all. Per-field movement is reported in
+ * the table but doesn't gate on its own (too few samples per field). With
+ * --require-baseline (as in CI) a missing baseline is an error, not a pass.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -53,7 +54,7 @@ interface Results {
 const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 
 async function main() {
-  const args = parseArgs() as ReturnType<typeof parseArgs> & { case?: string; recorded?: boolean; "save-baseline"?: boolean; tolerance?: string };
+  const args = parseArgs() as ReturnType<typeof parseArgs> & { case?: string; recorded?: boolean; "save-baseline"?: boolean; "require-baseline"?: boolean; tolerance?: string };
   const recorded = args.recorded === true;
   if (!recorded && !hasExtractCredentials()) {
     console.log("golden: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY; skipping live run (use --recorded to re-score the last run).");
@@ -141,14 +142,32 @@ async function main() {
     return;
   }
 
+  // Gate on overall accuracy (all field checks pooled) and event recall. Individual fields
+  // have 1–5 samples, so one non-deterministic answer swings a field by 20–50%: shown in
+  // the table above, but gating on it would make the job flaky.
   const tolerance = Number(args.tolerance ?? 0.05);
-  if (baseline) {
-    const regressions = Object.entries(summary.fields).filter(([k, f]) => (baseline.summary.fields[k]?.accuracy ?? 0) - f.accuracy > tolerance);
-    if (e.recall < baseline.summary.events.recall) regressions.push(["events.recall", { accuracy: e.recall, correct: 0, total: 0 }]);
-    if (regressions.length) {
-      console.error(`golden: regression beyond ${tolerance} in ${regressions.map(([k]) => k).join(", ")}`);
+  const overall = (f: Record<string, { correct: number; total: number }>) => {
+    const t = Object.values(f).reduce((a, x) => ({ c: a.c + x.correct, n: a.n + x.total }), { c: 0, n: 0 });
+    return t.n ? t.c / t.n : 1;
+  };
+  if (!baseline) {
+    const msg = "golden: no committed baseline (tests/golden/results/baseline.json), so nothing to compare against";
+    if (args["require-baseline"]) {
+      console.error(`${msg}. Run with --save-baseline and commit it.`);
       process.exit(1);
     }
+    console.warn(msg);
+    return;
+  }
+  const now = overall(summary.fields);
+  const before = overall(baseline.summary.fields);
+  console.log(`golden: overall field accuracy ${pct(now)} (baseline ${pct(before)}), event recall ${pct(e.recall)} (baseline ${pct(baseline.summary.events.recall)})`);
+  const failures: string[] = [];
+  if (before - now > tolerance) failures.push(`overall accuracy fell from ${pct(before)} to ${pct(now)}`);
+  if (e.recall < baseline.summary.events.recall) failures.push(`event recall fell from ${pct(baseline.summary.events.recall)} to ${pct(e.recall)}`);
+  if (failures.length) {
+    console.error(`golden: regression: ${failures.join("; ")}`);
+    process.exit(1);
   }
 }
 

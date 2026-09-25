@@ -1,0 +1,305 @@
+{
+  "cases": {
+    "cpo-echoes-of-vienna": {
+      "mismatches": [
+        "[Echoes of Vienna] presenter: expected \"Cape Town Philharmonic Orchestra\", got null"
+      ],
+      "raw": [
+        {
+          "confidence": 0.96,
+          "description": "Vienna-inspired orchestral program featuring Mozart, Strauss and Richard Strauss. Pianist François du Toit, conducted by Arjan Tien.",
+          "doors": null,
+          "duration_minutes": null,
+          "end": null,
+          "extraction_notes": "Clear calendar entry. Concert-specific title 'ECHOES OF VIENNA' distinguished from series 'Summer Symphonies at the City Hall'. Venue confirmed from entry title 'at the City Hall'.",
+          "genre_tags": [
+            "orchestral"
+          ],
+          "needs_review": [],
+          "performers": [
+            {
+              "instrument": null,
+              "is_south_african": null,
+              "name": "Arjan Tien",
+              "role": "conductor"
+            },
+            {
+              "instrument": "piano",
+              "is_south_african": null,
+              "name": "François du Toit",
+              "role": "soloist"
+            }
+          ],
+          "presenter": null,
+          "programme": [
+            {
+              "arranger": null,
+              "catalogue": null,
+              "composer": "Wolfgang Amadeus Mozart",
+              "is_premiere": null,
+              "movements": null,
+              "work": "Overture to Die Entführung aus dem Serail"
+            },
+            {
+              "arranger": null,
+              "catalogue": null,
+              "composer": "Wolfgang Amadeus Mozart",
+              "is_premiere": null,
+              "movements": null,
+              "work": "Piano Concerto No. 24"
+            },
+            {
+              "arranger": null,
+              "catalogue": null,
+              "composer": "Johann Strauss II",
+              "is_premiere": null,
+              "movements": null,
+              "work": "Die Fledermaus Overture"
+            },
+            {
+              "arranger": null,
+              "catalogue": null,
+              "composer": "Richard Strauss",
+              "is_premiere": null,
+              "movements": null,
+              "work": "Der Rosenkavalier Suite"
+            }
+          ],
+          "sa_content": {
+            "has_sa_work": false,
+            "languages": [],
+            "sa_composers": []
+          },
+          "series": "Summer Symphonies at the City Hall",
+          "source": {
+            "url": "https://cpo.org.za/concerts/#202611121930-summer-symphonies-at-the-city-hall"
+          },
+          "start": "2026-11-12T19:30:00+02:00",
+          "status": "scheduled",
+          "subtitle": null,
+          "tickets": {
+            "booking_required": null,
+            "concessions_note": null,
+            "is_free": null,
+            "price_max": null,
+            "price_min": null,
+            "url": null,
+            "vendor": null
+          },
+          "title": "ECHOES OF VIENNA",
+          "venue": {
+            "address": null,
+            "city": "Cape Town",
+            "lat": null,
+            "lng": null,
+            "name": "Cape Town City Hall",
+            "province": "Western Cape",
+            "venue_id": "cape-town-city-hall"
+          }
+        }
+      ]
+    },
+    "jpo-heritage-day": {
+      "mismatches": [
+        "[Heritage Day Symphonic Jazz] series: expected null, got \"JPO Symphonic Jazz\"",
+        "[Heritage Day Symphonic Jazz] performers: expected daniel boico|conductor, victor masondo|soloist, lindi ngonelo|soloist; got daniel boico|conductor, victor masondo|soloist, lindi ngonelo|soloist, johannesburg philharmonic orchestra|orchestra"
+      ],
+      "raw": [
+        {
+          "confidence": 0.9,
+          "description": "The JPO presents its annual symphonic jazz concert, featuring Duke Ellington's Nutcracker Suite and South African jazz artists Victor Masondo and Lindi Ngonelo, with works by Leonard Bernstein and George Gershwin.",
+          "doors": null,
+          "duration_minutes": null,
+          "end": null,
+          "extraction_notes": "Programme listing mentions works by Leonard Bernstein and George Gershwin but specific pieces are not identified on the page. Ticket pricing information not provided. Victor Masondo and Lindi Ngonelo are described as South African jazz veterans but are not in the provided SA composer table.",
+          "genre_tags": [
+            "orchestral",
+            "crossover"
+          ],
+          "needs_review": [
+            "programme",
+            "tickets.price_min",
+            "tickets.price_max",
+            "tickets.is_free"
+          ],
+          "performers": [
+            {
+              "instrument": null,
+              "is_south_african": null,
+              "name": "Daniel Boico",
+              "role": "conductor"
+            },
+            {
+              "instrument": null,
+              "is_south_african": true,
+              "name": "Victor Masondo",
+              "role": "soloist"
+            },
+            {
+              "instrument": null,
+              "is_south_african": true,
+              "name": "Lindi Ngonelo",
+              "role": "soloist"
+            },
+            {
+              "instrument": null,
+              "is_south_african": null,
+              "name": "Johannesburg Philharmonic Orchestra",
+              "role": "orchestra"
+            }
+          ],
+          "presenter": "Johannesburg Philharmonic Orchestra",
+          "programme": [
+            {
+              "arranger": null,
+              "catalogue": null,
+              "composer": "Duke Ellington",
+              "is_premiere": null,
+              "movements": null,
+              "work": "Nutcracker Suite"
+            }
+          ],
+          "sa_content": {
+            "has_sa_work": true,
+            "languages": [
+              "English"
+            ],
+            "sa_composers": []
+          },
+          "series": "JPO Symphonic Jazz",
+          "source": {
+            "url": "https://jpo.co.za/heritage-day-symphonic-jazz/"
+          },
+          "start": "2026-09-24T19:00:00+02:00",
+          "status": "scheduled",
+          "subtitle": null,
+          "tickets": {
+            "booking_required": true,
+            "concessions_note": null,
+            "is_free": null,
+            "price_max": null,
+            "price_min": null,
+            "url": "https://www.quicket.co.za/events/392145-the-jpo-symphonic-jazz-concert-2026/?utm_source=EventPage&utm_medium=Sharebox&utm_campaign=&ref=event-page-share",
+            "vendor": "quicket"
+          },
+          "title": "Heritage Day Symphonic Jazz",
+          "venue": {
+            "address": null,
+            "city": "Johannesburg",
+            "lat": null,
+            "lng": null,
+            "name": "The Linder Auditorium",
+            "province": "Gauteng",
+            "venue_id": "linder-auditorium"
+          }
+        }
+      ]
+    }
+  },
+  "models": [
+    "claude-haiku-4-5"
+  ],
+  "prompt_version": "2997e10ca477",
+  "ran_at": "2026-09-25T10:35:21.807Z",
+  "summary": {
+    "events": {
+      "actual": 2,
+      "expected": 2,
+      "matched": 2,
+      "precision": 1,
+      "recall": 1
+    },
+    "fields": {
+      "description.present": {
+        "accuracy": 1,
+        "correct": 1,
+        "total": 1
+      },
+      "genre_tags": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "performers": {
+        "accuracy": 0.9285714285714286,
+        "correct": 1.8571428571428572,
+        "total": 2
+      },
+      "performers.instrument": {
+        "accuracy": 1,
+        "correct": 1,
+        "total": 1
+      },
+      "presenter": {
+        "accuracy": 0.5,
+        "correct": 1,
+        "total": 2
+      },
+      "programme.composer": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "programme.work": {
+        "accuracy": 1,
+        "correct": 5,
+        "total": 5
+      },
+      "sa_content.has_sa_work": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "series": {
+        "accuracy": 0.5,
+        "correct": 1,
+        "total": 2
+      },
+      "start": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "status": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "tickets.url": {
+        "accuracy": 1,
+        "correct": 1,
+        "total": 1
+      },
+      "tickets.vendor": {
+        "accuracy": 1,
+        "correct": 1,
+        "total": 1
+      },
+      "title": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "venue.city": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "venue.name": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "venue.province": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      },
+      "venue.venue_id": {
+        "accuracy": 1,
+        "correct": 2,
+        "total": 2
+      }
+    }
+  }
+}

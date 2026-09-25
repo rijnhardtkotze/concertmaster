@@ -29,6 +29,12 @@ export interface AdapterContext {
   /** Conditional GET that falls back to the cached raw body on 304, and refetches if the cache is gone. */
   getBody(url: string): Promise<BodyResult>;
   warn(msg: string): void;
+  /**
+   * A known document couldn't be refreshed this run: keep it in the source's live set
+   * (with its last content) instead of treating it as gone. Returns false for URLs we
+   * have never fetched, which are simply skipped.
+   */
+  keepPrevious(url: string): boolean;
 }
 
 export type Adapter = (source: SourceConfig, ctx: AdapterContext) => Promise<FetchedDocument[]>;

@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import { extractText, getDocumentProxy } from "unpdf";
 import { FETCH } from "../lib/config.ts";
+import { HttpError } from "../lib/http.ts";
 import { errorMessage } from "../lib/log.ts";
 import type { HtmlAdapterConfig, SourceConfig } from "../lib/sources.ts";
 import { htmlToText } from "../lib/text.ts";
@@ -84,8 +85,12 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
     try {
       docs.push(await toDocument(url, cfg, ctx));
     } catch (err) {
-      // A single dead detail page is a warning, not a source failure.
-      ctx.warn(`skipped ${url}: ${errorMessage(err)}`);
+      // A single dead detail page is a warning, not a source failure. If we knew the page,
+      // keep its last copy: a transient error must not make its event look withdrawn. A 404/410
+      // means the page really is gone, so its event is allowed to go unconfirmed.
+      const gone = err instanceof HttpError && (err.status === 404 || err.status === 410);
+      if (!gone && ctx.keepPrevious(url)) ctx.warn(`kept last copy of ${url} after fetch error: ${errorMessage(err)}`);
+      else ctx.warn(`skipped ${url}: ${errorMessage(err)}`);
     }
   }
   return docs;

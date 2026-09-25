@@ -26,8 +26,19 @@ import { nowIso } from "../lib/time.ts";
 const ADAPTERS: Record<string, Adapter> = { html: htmlAdapter, quicket: quicketAdapter };
 const log = logger("fetch");
 
-function makeContext(client: PoliteClient, manifest: Manifest, source: SourceConfig, stats: Record<string, SourceRunStats>): AdapterContext {
+function makeContext(
+  client: PoliteClient,
+  manifest: Manifest,
+  source: SourceConfig,
+  stats: Record<string, SourceRunStats>,
+  kept: Set<string>,
+): AdapterContext {
   return {
+    keepPrevious: (url) => {
+      if (manifest[url]?.source !== source.slug) return false;
+      kept.add(url);
+      return true;
+    },
     client,
     manifest,
     warn: (msg) => {
@@ -93,9 +104,10 @@ async function runSource(
     if (!adapter) throw new Error(`unknown adapter type ${source.adapter.type}`);
     // Check the source's own homepage first so a blanket disallow skips the whole source.
     await client.checkRobots(source.adapter.type === "html" ? source.adapter.startUrls[0]! : source.homepage);
-    const docs = await adapter(source, makeContext(client, manifest, source, stats));
+    const kept = new Set<string>();
+    const docs = await adapter(source, makeContext(client, manifest, source, stats, kept));
     const unique = new Map(docs.map((d) => [d.url, d]));
-    if (!unique.size && !source.allowEmpty) {
+    if (!unique.size && !kept.size && !source.allowEmpty) {
       throw new Error("0 documents discovered; the listing layout or selector has probably changed");
     }
     for (const doc of unique.values()) {
@@ -103,7 +115,7 @@ async function runSource(
       bump(stats, source.slug, "documents_fetched");
       bump(stats, source.slug, r === "changed" ? "documents_changed" : "documents_unchanged");
     }
-    status.documents = [...unique.keys()].sort();
+    status.documents = [...new Set([...unique.keys(), ...kept])].sort();
     status.consecutive_failures = 0;
     status.last_error = null;
     status.last_success = at;
