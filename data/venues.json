@@ -170,6 +170,19 @@
     "lng": null
   },
   {
+    "venue_id": "northwards-house",
+    "name": "Northwards House",
+    "aliases": [
+      "Northwards",
+      "Northwards, Parktown"
+    ],
+    "address": "21 Rockridge Road, Parktown",
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": -26.1783364,
+    "lng": 28.035396
+  },
+  {
     "venue_id": "odeion",
     "name": "Odeion",
     "aliases": [
@@ -207,6 +220,22 @@
     "province": "Gauteng",
     "lat": null,
     "lng": null
+  },
+  {
+    "venue_id": "shed-and-silo",
+    "name": "The Shed and Silo Country Restaurant",
+    "aliases": [
+      "Shed and Silo",
+      "The Shed and Silo",
+      "Shed & Silo",
+      "The Shed & Silo",
+      "Shed and Silo Country Restaurant"
+    ],
+    "address": "77 Thomas Road",
+    "city": "Benoni",
+    "province": "Gauteng",
+    "lat": -26.1113385,
+    "lng": 28.2973771
   },
   {
     "venue_id": "soweto-theatre",
@@ -251,6 +280,22 @@
     ],
     "address": null,
     "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "st-stithians-chapel",
+    "name": "St Stithians College Chapel",
+    "aliases": [
+      "St. Stithians College Chapel",
+      "St Stithians Chapel",
+      "St. Stithians Chapel",
+      "St Sthithians College Chapel",
+      "St. Sthithians College Chapel"
+    ],
+    "address": "40 Peter Place, Lyme Park",
+    "city": "Sandton",
     "province": "Gauteng",
     "lat": null,
     "lng": null

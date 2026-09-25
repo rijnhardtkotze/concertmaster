@@ -21,6 +21,7 @@ export default defineSource({
     keywords: CLASSICAL_KEYWORDS,
     organiserIds: [
       36134, // Johannesburg Philharmonic Orchestra
+      47792, // Mzansi Chamber Music Collective
       53944, // Symphony Choir of Johannesburg
       75734, // UFS Odeion School of Music
       82645, // University of Pretoria, School of the Arts: Music

@@ -74,8 +74,20 @@ export function lastDate(e: QuicketEvent): number | null {
   return dates.length ? Math.max(...dates) : null;
 }
 
+/**
+ * The list endpoint returns organiser.id as 0 (and name as null) for every event;
+ * only the detail endpoint fills them in. organiserPageUrl is always there and
+ * carries the id ("/organisers/47792-chamber-music-collective").
+ */
+export function organiserId(e: QuicketEvent): number | null {
+  if (e.organiser?.id) return e.organiser.id;
+  const m = /\/organisers\/(\d+)/.exec(e.organiser?.organiserPageUrl ?? "");
+  return m ? Number(m[1]) : null;
+}
+
 export function quicketMatches(e: QuicketEvent, cfg: QuicketAdapterConfig): boolean {
-  if (e.organiser?.id && cfg.organiserIds?.includes(e.organiser.id)) return true;
+  const org = organiserId(e);
+  if (org && cfg.organiserIds?.includes(org)) return true;
   const hay = [e.name, e.description ?? "", e.organiser?.name ?? "", ...(e.categories ?? []).map((c) => c.name), e.venue?.name ?? ""].join(" ");
   return cfg.keywords.test(hay);
 }
