@@ -90,6 +90,14 @@ describe("dedupe", () => {
     expect(jpo.length).toBe(2);
   });
 
+  it("carries review paths for SA content copied along with a duplicate's programme", () => {
+    const bare = event({ programme: [] });
+    const withProgramme = event({ needs_review: ["sa_content.languages"], tickets: { url: "https://www.quicket.co.za/events/9-spring/", vendor: "quicket", price_min: null, price_max: null, is_free: null, concessions_note: null, booking_required: null } }, { url: "https://www.quicket.co.za/events/9-spring/", source: "quicket" });
+    const { events } = dedupe([bare, withProgramme], V, roles);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.needs_review).toContain("sa_content.languages");
+  });
+
   it("does not fuzzy-merge different concerts at the same venue on the same night", () => {
     const other = event({ title: "Chamber Music Soirée", start: "2026-10-15T19:30:00+02:00" }, { url: "https://jpo.co.za/other/" });
     expect(dedupe([presenter(), other], V, roles).events).toHaveLength(2);

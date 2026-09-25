@@ -113,6 +113,7 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
       merged.programme = other.programme;
       merged.sa_content = other.sa_content;
       fill("programme");
+      fill("sa_content");
     }
     if (!merged.genre_tags?.length && other.genre_tags?.length) {
       merged.genre_tags = other.genre_tags;
