@@ -172,6 +172,23 @@ describe("merge", () => {
     expect(r.published.find((e) => e.start.startsWith("2026-10-15T19:30"))?.status).toBe("unconfirmed");
   });
 
+  it("keeps ids by title when one of two close performances is retitled and moves toward the other", () => {
+    // Both on one season page, so dedupe keeps them apart and merge's id matching decides.
+    const page = { url: "https://jpo.co.za/season/" };
+    const a = event({ title: "Spring Symphony Concert", start: "2026-10-15T19:00:00+02:00" }, page);
+    const b = event({ title: "Spring Symphony Gala", start: "2026-10-15T19:40:00+02:00" }, page);
+    const first = merge({ ...base, incoming: dedupe([a, b], V, roles).events, published: [] }).published;
+    const idOf = (list: typeof first, prefix: string) => list.find((e) => e.title.startsWith(prefix) && e.status !== "unconfirmed")?.id;
+    const [idA, idB] = [idOf(first, "Spring Symphony Concert"), idOf(first, "Spring Symphony Gala")];
+    expect(idA && idB && idA !== idB).toBeTruthy();
+    // b is retitled slightly and moved to 19:05, now nearer a's old time than its own.
+    const b2 = event({ title: "Spring Symphony Gala Night", start: "2026-10-15T19:05:00+02:00" }, page);
+    const r = merge({ ...base, incoming: dedupe([b2, a], V, roles).events, published: first });
+    expect(idOf(r.published, "Spring Symphony Concert")).toBe(idA);
+    expect(idOf(r.published, "Spring Symphony Gala")).toBe(idB);
+    expect(r.counts.unconfirmed).toBe(0);
+  });
+
   it("counts a pending change to a published event as new review work once, not every run", () => {
     const first = merge({ ...base, incoming: [presenter()], published: [] }).published;
     const shaky = { ...presenter(), confidence: 0.5 };
