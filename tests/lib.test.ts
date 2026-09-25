@@ -146,6 +146,17 @@ describe("adapters", () => {
     };
     expect(quicketMatches(e, cfg)).toBe(true);
     expect(quicketMatches({ ...e, name: "Comedy night", organiser: { id: 1, name: "Laughs" }, venue: { name: "Pub" } }, cfg)).toBe(false);
+    // The list endpoint zeroes organiser.id; the id still comes through in organiserPageUrl.
+    const listed = {
+      ...e,
+      name: "Magdalena de Vries and the Cross-Sticks Percussion Group",
+      venue: { name: "St Stithians College Chapel" },
+      organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/47792-chamber-music-collective" },
+    };
+    expect(quicketMatches(listed, cfg)).toBe(true);
+    // ...and so it's the only place the presenter is named.
+    expect(renderQuicketEvent(listed)).toContain("Organiser page: <https://www.quicket.co.za/organisers/47792-chamber-music-collective>");
+    expect(quicketMatches({ ...listed, organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/16617-x" } }, cfg)).toBe(false);
     const text = renderQuicketEvent(e);
     expect(text).toContain("Event page: https://www.quicket.co.za/events/392145-x/");
     expect(text).not.toContain("2026-09-01T10:00:00"); // lastModified would churn the content hash
