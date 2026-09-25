@@ -37,7 +37,10 @@ export class PoliteClient {
   private nextSlot = new Map<string, number>();
   private robots = new Map<string, Promise<Robots | { unreachable: string }>>();
 
-  constructor(private readonly minIntervalMs = FETCH.minIntervalMs) {}
+  constructor(
+    private readonly minIntervalMs = FETCH.minIntervalMs,
+    private readonly maxBytes = FETCH.maxBytes,
+  ) {}
 
   private async throttle(host: string, delayMs: number) {
     const now = Date.now();
@@ -92,10 +95,28 @@ export class PoliteClient {
       signal: AbortSignal.timeout(FETCH.timeoutMs),
     });
     const len = Number(res.headers.get("content-length") ?? 0);
-    if (len > FETCH.maxBytes) throw new HttpError(`response too large (${len} bytes) from ${redact(url)}`, res.status);
-    const body = Buffer.from(await res.arrayBuffer());
-    if (body.length > FETCH.maxBytes) throw new HttpError(`response too large (${body.length} bytes) from ${redact(url)}`, res.status);
-    return { status: res.status, url: res.url || url, headers: res.headers, body };
+    if (len > this.maxBytes) {
+      await res.body?.cancel();
+      throw new HttpError(`response too large (${len} bytes) from ${redact(url)}`, res.status);
+    }
+    // Content-Length can be missing or wrong, so count while streaming and stop at the cap
+    // rather than buffering an unbounded body into memory first.
+    const chunks: Buffer[] = [];
+    let size = 0;
+    if (res.body) {
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > this.maxBytes) {
+          await reader.cancel();
+          throw new HttpError(`response too large (over ${this.maxBytes} bytes) from ${redact(url)}`, res.status);
+        }
+        chunks.push(Buffer.from(value));
+      }
+    }
+    return { status: res.status, url: res.url || url, headers: res.headers, body: Buffer.concat(chunks) };
   }
 
   /**

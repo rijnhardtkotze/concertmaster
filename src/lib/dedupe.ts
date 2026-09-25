@@ -80,7 +80,11 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
     if (other.source.url !== merged.source.url) secondary.add(other.source.url);
     for (const u of other.source.secondary_urls ?? []) if (u !== merged.source.url) secondary.add(u);
     const otherReview = new Set(other.needs_review ?? []);
+    // Anything taken from a record that itself needs review needs review in the merged
+    // record too; otherwise a shaky vendor listing could publish through a confident presenter.
+    const otherUncertain = other.confidence < RULES.publishConfidence;
     const fill = (field: string) => {
+      if (otherUncertain) review.add(field);
       for (const p of otherReview) if (p === field || p.startsWith(`${field}.`)) review.add(p);
     };
 
@@ -99,19 +103,24 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
       merged.sa_content = other.sa_content;
       fill("programme");
     }
-    if (!merged.genre_tags?.length && other.genre_tags?.length) merged.genre_tags = other.genre_tags;
-    if (!merged.venue.venue_id && other.venue.venue_id) merged.venue = other.venue;
+    if (!merged.genre_tags?.length && other.genre_tags?.length) {
+      merged.genre_tags = other.genre_tags;
+      fill("genre_tags");
+    }
+    if (!merged.venue.venue_id && other.venue.venue_id) {
+      merged.venue = other.venue;
+      fill("venue");
+    }
 
     // Ticket vendor's URL beats the presenter's link to it; fill prices the presenter didn't give.
     const ot = other.tickets;
     if (ot) {
       const mt = (merged.tickets ??= { currency: "ZAR" });
-      if (roles[other.source.publisher] === "vendor" && ot.url) {
+      if (ot.url && ot.url !== mt.url && (roles[other.source.publisher] === "vendor" || !mt.url)) {
         mt.url = ot.url;
-        mt.vendor = ot.vendor ?? mt.vendor;
-      } else if (!mt.url && ot.url) {
-        mt.url = ot.url;
-        mt.vendor ??= ot.vendor;
+        if (roles[other.source.publisher] === "vendor") mt.vendor = ot.vendor ?? mt.vendor;
+        else mt.vendor ??= ot.vendor;
+        fill("tickets.url");
       }
       for (const k of ["price_min", "price_max", "is_free", "concessions_note", "booking_required"] as const) {
         if (mt[k] == null && ot[k] != null) {
@@ -132,17 +141,36 @@ export function mergeCluster(cluster: Event[], roles: Record<string, SourceRole>
   return canonicalEvent(merged);
 }
 
-class UnionFind {
+/**
+ * Union-find that also tracks each cluster's earliest and latest start, so a merge that
+ * would stretch a cluster beyond one performance window is refused. Pairwise "within an
+ * hour" isn't transitive: 18:00~19:00 and 19:00~20:00 must not make 18:00 and 20:00 one event.
+ */
+class PerformanceClusters {
   private parent: number[];
-  constructor(n: number) {
-    this.parent = Array.from({ length: n }, (_, i) => i);
+  private lo: number[];
+  private hi: number[];
+  constructor(starts: number[]) {
+    this.parent = starts.map((_, i) => i);
+    this.lo = [...starts];
+    this.hi = [...starts];
   }
   find(i: number): number {
     while (this.parent[i] !== i) i = this.parent[i] = this.parent[this.parent[i]!]!;
     return i;
   }
-  union(a: number, b: number) {
-    this.parent[this.find(a)] = this.find(b);
+  /** Joins the two clusters if the result still spans at most one performance window. */
+  union(a: number, b: number): boolean {
+    const ra = this.find(a);
+    const rb = this.find(b);
+    if (ra === rb) return true;
+    const lo = Math.min(this.lo[ra]!, this.lo[rb]!);
+    const hi = Math.max(this.hi[ra]!, this.hi[rb]!);
+    if (hi - lo > SAME_PERFORMANCE_MS) return false;
+    this.parent[ra] = rb;
+    this.lo[rb] = lo;
+    this.hi[rb] = hi;
+    return true;
   }
 }
 
@@ -154,7 +182,7 @@ class UnionFind {
  */
 export function dedupe(input: Event[], venues: VenueIndex, roles: Record<string, SourceRole>, threshold = RULES.fuzzyTitleThreshold) {
   const events = disambiguateKeys(input);
-  const uf = new UnionFind(events.length);
+  const uf = new PerformanceClusters(events.map((e) => Date.parse(e.start)));
   const fuzzy: FuzzyMerge[] = [];
 
   const byKey = new Map<string, number[]>();
@@ -175,7 +203,7 @@ export function dedupe(input: Event[], venues: VenueIndex, roles: Record<string,
         if (!closeInTime(a, b) || !sameVenue(a, b, venues)) continue;
         const score = titleSimilarity(a.title, b.title);
         if (score < threshold) continue;
-        uf.union(i, j);
+        if (!uf.union(i, j)) continue;
         fuzzy.push({
           date: localDate(a.start),
           kept: { id: a.id, source: a.source.publisher, title: a.title },

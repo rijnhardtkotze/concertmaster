@@ -54,6 +54,27 @@ describe("dedupe", () => {
     expect(new Set(events.map((e) => e.id)).size).toBe(2);
   });
 
+  it("never chains fuzzy merges beyond one performance window (18:00~19:00~20:00)", () => {
+    const at = (t: string, url: string, title: string) => event({ start: `2026-10-15T${t}:00+02:00`, title }, { url });
+    const { events } = dedupe(
+      [at("18:00", "https://jpo.co.za/a/", "Spring Symphony Concert"), at("19:00", "https://jpo.co.za/b/", "Spring Symphony Concert!"), at("20:00", "https://jpo.co.za/c/", "Spring Symphony Concert!!")],
+      V,
+      roles,
+    );
+    const urls = (e: (typeof events)[number]) => [e.source.url, ...(e.source.secondary_urls ?? [])];
+    expect(events.length).toBeGreaterThanOrEqual(2);
+    for (const e of events) expect(urls(e).includes("https://jpo.co.za/a/") && urls(e).includes("https://jpo.co.za/c/")).toBe(false);
+  });
+
+  it("flags fields taken from a low-confidence duplicate for review", () => {
+    const { events } = dedupe([vendor({ confidence: 0.5 }), presenter()], V, roles);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.tickets?.url).toBe("https://www.quicket.co.za/events/9-spring/");
+    expect(events[0]!.needs_review).toEqual(expect.arrayContaining(["tickets.url", "tickets.price_min", "tickets.price_max"]));
+    // and a confident vendor adds nothing to the review list
+    expect(dedupe([vendor(), presenter()], V, roles).events[0]!.needs_review).toEqual([]);
+  });
+
   it("does not fuzzy-merge different concerts at the same venue on the same night", () => {
     const other = event({ title: "Chamber Music Soirée", start: "2026-10-15T19:30:00+02:00" }, { url: "https://jpo.co.za/other/" });
     expect(dedupe([presenter(), other], V, roles).events).toHaveLength(2);

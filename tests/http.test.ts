@@ -24,6 +24,19 @@ beforeAll(async () => {
     if (req.url === "/robots.txt") return res.end("User-agent: *\nAllow: /\n");
     if (req.url === "/moved") return res.writeHead(302, { location: `${bUrl}/private/page` }).end();
     if (req.url === "/fine") return res.writeHead(301, { location: `${bUrl}/public` }).end();
+    if (req.url === "/huge") {
+      // No Content-Length: chunked, and far bigger than the cap used in the test.
+      res.writeHead(200, { "content-type": "text/html" });
+      const chunk = "x".repeat(64 * 1024);
+      let sent = 0;
+      const pump = () => {
+        while (sent < 200 && res.write(chunk)) sent++;
+        if (sent < 200) res.once("drain", pump);
+        else res.end();
+      };
+      res.on("close", () => (sent = 200));
+      return pump();
+    }
     res.end("hi");
   });
   aUrl = await listen(a);
@@ -46,5 +59,10 @@ describe("PoliteClient redirects", () => {
     expect(res.status).toBe(200);
     expect(res.url).toBe(`${bUrl}/public`);
     expect(res.body.toString()).toContain("ok");
+  });
+
+  it("stops reading at the size cap even without a Content-Length header", async () => {
+    const client = new PoliteClient(0, 256 * 1024);
+    await expect(client.get(`${aUrl}/huge`)).rejects.toThrow(/too large/);
   });
 });
