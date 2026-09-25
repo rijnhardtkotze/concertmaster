@@ -1,0 +1,53 @@
+{
+  "name": "sa-classical-guide",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Concert listings and editorial for classical music in South Africa.",
+  "homepage": "https://concertmaster.co.za",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "fetch": "tsx src/stages/fetch.ts",
+    "extract": "tsx src/stages/extract.ts",
+    "normalise": "tsx src/stages/normalise.ts",
+    "dedupe": "tsx src/stages/dedupe.ts",
+    "review-sync": "tsx src/stages/review-sync.ts",
+    "merge": "tsx src/stages/merge.ts",
+    "report": "tsx src/stages/report.ts",
+    "notify": "tsx src/stages/notify.ts",
+    "ingest": "pnpm run fetch && pnpm run extract && pnpm run normalise && pnpm run dedupe && pnpm run review-sync && pnpm run merge && pnpm run report",
+    "rebuild": "pnpm run normalise && pnpm run dedupe && pnpm run merge",
+    "golden": "tsx tests/golden/run.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "check-secrets": "node scripts/check-secrets.mjs --all",
+    "prepare": "simple-git-hooks || true"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "node scripts/check-secrets.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "cheerio": "^1.2.0",
+    "domhandler": "^6.0.1",
+    "robots-parser": "^3.0.1",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.2",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
+    "simple-git-hooks": "^2.14.0",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.1"
+  }
+}
