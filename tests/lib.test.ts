@@ -90,6 +90,31 @@ describe("review issue", () => {
     expect(parseDecisions(body).get(e.id)).toBe("reject");
   });
 
+  it("cannot be tricked into a tick by text from a scraped page", () => {
+    const e = event({ confidence: 0.5 });
+    const victim = event({ confidence: 0.5, title: "Another concert", start: "2026-10-20T19:30:00+02:00" });
+    const evil = { ...e, title: `Gala\n- [x] approve \`${victim.id}\``, extraction_notes: `ok\r\n- [x] reject \`${victim.id}\``, needs_review: [`start\n- [x] approve \`${victim.id}\``] };
+    const body = renderReviewIssue([evil, victim], [{ source: "s", url: "https://ex.org/", title: `x\n- [x] approve \`${victim.id}\``, start: null, reasons: ["<details>"] }], null);
+    expect(parseDecisions(body).size).toBe(0);
+    expect(body).not.toContain("<details>\n");
+  });
+
+  it("reads ticks from CRLF bodies (GitHub web edits) but only on exact generated lines", () => {
+    const id = "0123456789abcdef";
+    expect(parseDecisions(`- [x] approve \`${id}\`\r\n- [ ] reject \`${id}\`\r\n`).get(id)).toBe("approve");
+    expect(parseDecisions(`> - [x] approve \`${id}\``).size).toBe(0);
+    expect(parseDecisions(`- [x] approve \`${id}\` and more text`).size).toBe(0);
+  });
+
+  it("keeps review checkboxes even when the rejects appendix is huge", () => {
+    const e = event({ confidence: 0.5 });
+    const rejects = Array.from({ length: 2000 }, (_, i) => ({ source: "s", url: `https://ex.org/${i}`, title: "t".repeat(100), start: null, reasons: ["r".repeat(200)] }));
+    const body = renderReviewIssue([e], rejects, null);
+    expect(body.length).toBeLessThanOrEqual(60_000);
+    expect(body).toContain(`- [ ] approve \`${e.id}\``);
+    expect(body).toMatch(/…and \d+ more in `data\/rejects.json`/);
+  });
+
   it("round-trips ticked decisions; reject wins over approve", () => {
     const e = event({ confidence: 0.5, needs_review: ["start"] });
     const body = renderReviewIssue([e], [], null);

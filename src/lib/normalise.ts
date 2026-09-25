@@ -53,7 +53,9 @@ function sameSite(a: string, b: string): boolean {
  */
 export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContext, guardFailure?: string): NormaliseResult {
   const reasons: string[] = [];
-  const review = new Set<string>(Array.isArray(raw.needs_review) ? raw.needs_review.filter((x: unknown) => typeof x === "string") : []);
+  // needs_review holds field paths ("programme.1.composer"); anything else is dropped, it has no business in a review issue.
+  const FIELD_PATH = /^[a-z_]+(\.[a-z0-9_]+){0,4}$/i;
+  const review = new Set<string>(Array.isArray(raw.needs_review) ? raw.needs_review.filter((x: unknown) => typeof x === "string" && FIELD_PATH.test(x)) : []);
   const e: Raw = structuredClone(raw);
 
   // Timestamps → explicit +02:00.
