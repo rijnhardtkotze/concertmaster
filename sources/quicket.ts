@@ -22,6 +22,8 @@ export default defineSource({
     organiserIds: [
       36134, // Johannesburg Philharmonic Orchestra
       53944, // Symphony Choir of Johannesburg
+      35300, // Old Nectar Concerts (older organiser page)
+      40248, // Old Nectar Concerts
       75734, // UFS Odeion School of Music
       82645, // University of Pretoria, School of the Arts: Music
     ],

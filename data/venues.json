@@ -183,6 +183,20 @@
     "lng": null
   },
   {
+    "venue_id": "old-nectar",
+    "name": "Old Nectar Gardens",
+    "aliases": [
+      "Old Nectar",
+      "Old Nectar wine cellar",
+      "Old Nectar Cellar"
+    ],
+    "address": "Jonkershoek Road",
+    "city": "Stellenbosch",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
     "venue_id": "playhouse-durban",
     "name": "The Playhouse",
     "aliases": [
