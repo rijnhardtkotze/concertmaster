@@ -157,6 +157,21 @@
     "lng": null
   },
   {
+    "venue_id": "miriam-makeba-concert-hall",
+    "name": "Dr Miriam Makeba Concert Hall",
+    "aliases": [
+      "Miriam Makeba Concert Hall",
+      "Miriam Makeba Hall",
+      "Miriam Makeba Hall, UNISA",
+      "Unisa Miriam Makeba Concert Hall"
+    ],
+    "address": "Theo van Wijk Building, Unisa Muckleneuk Campus",
+    "city": "Pretoria",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
     "venue_id": "musaion",
     "name": "Musaion",
     "aliases": [
@@ -192,6 +207,20 @@
     "address": null,
     "city": "Bloemfontein",
     "province": "Free State",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "old-nectar",
+    "name": "Old Nectar Gardens",
+    "aliases": [
+      "Old Nectar",
+      "Old Nectar wine cellar",
+      "Old Nectar Cellar"
+    ],
+    "address": "Jonkershoek Road",
+    "city": "Stellenbosch",
+    "province": "Western Cape",
     "lat": null,
     "lng": null
   },

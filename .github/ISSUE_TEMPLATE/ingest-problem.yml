@@ -1,0 +1,38 @@
+name: Ingest problem
+description: Something the pipeline got wrong - a missed concert, a wrong date or venue, a duplicate, or a source that stopped working.
+title: "Ingest: "
+labels: ["ingest-data"]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What went wrong
+      options:
+        - Missed event (on the source, not on the site)
+        - Wrong details (date, time, venue, price, performers)
+        - Duplicate listing
+        - Non-classical event got through
+        - Stale or cancelled event still listed
+        - Source broken or blocked
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source slug
+      description: The file name in sources/ (for example `jpo`, `webtickets`). Leave blank if unsure.
+  - type: input
+    id: url
+    attributes:
+      label: Link to the event on the source site
+  - type: input
+    id: site
+    attributes:
+      label: Link to the listing on our site (if any)
+  - type: textarea
+    id: details
+    attributes:
+      label: What you expected vs what you saw
+    validations:
+      required: true

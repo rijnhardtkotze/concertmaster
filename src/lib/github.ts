@@ -54,11 +54,11 @@ export class GitHub {
     return (await this.openIssues()).find((i) => i.title === title);
   }
 
-  createIssue(title: string, body: string) {
-    return this.req<Issue>("POST", "/issues", { title, body });
+  createIssue(title: string, body: string, labels: string[] = []) {
+    return this.req<Issue>("POST", "/issues", { title, body, labels });
   }
 
-  updateIssue(number: number, patch: { body?: string; state?: "open" | "closed"; state_reason?: string }) {
+  updateIssue(number: number, patch: { body?: string; state?: "open" | "closed"; state_reason?: string; labels?: string[] }) {
     return this.req<Issue>("PATCH", `/issues/${number}`, patch);
   }
 

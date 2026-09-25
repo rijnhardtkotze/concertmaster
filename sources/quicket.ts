@@ -20,9 +20,12 @@ export default defineSource({
     categories: [],
     keywords: CLASSICAL_KEYWORDS,
     organiserIds: [
+      34873, // Unisa Music Foundation
       36134, // Johannesburg Philharmonic Orchestra
       47792, // Mzansi Chamber Music Collective
       53944, // Symphony Choir of Johannesburg
+      35300, // Old Nectar Concerts (older organiser page)
+      40248, // Old Nectar Concerts
       75734, // UFS Odeion School of Music
       82645, // University of Pretoria, School of the Arts: Music
     ],
