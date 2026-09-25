@@ -138,3 +138,23 @@ describe("keyword pre-filter", async () => {
     for (const s of ["Organised by the Comedy Club", "Operation Smile fundraiser", "Bachelor party bingo", "Contemporary dance"]) expect(CLASSICAL_KEYWORDS.test(s), s).toBe(false);
   });
 });
+
+describe("extraction backend", async () => {
+  const { extractBackend } = await import("../src/lib/llm.ts");
+  const withEnv = (env: Record<string, string | undefined>, fn: () => void) => {
+    const saved = { ...process.env };
+    for (const [k, v] of Object.entries(env)) if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+    try {
+      fn();
+    } finally {
+      process.env = saved;
+    }
+  };
+  it("prefers the Claude subscription token, falls back to the API key, and fails loudly with neither", () => {
+    withEnv({ CLAUDE_CODE_OAUTH_TOKEN: "t", ANTHROPIC_API_KEY: "k", EXTRACT_BACKEND: undefined }, () => expect(extractBackend()).toBe("subscription"));
+    withEnv({ CLAUDE_CODE_OAUTH_TOKEN: undefined, ANTHROPIC_API_KEY: "k", EXTRACT_BACKEND: undefined }, () => expect(extractBackend()).toBe("api"));
+    withEnv({ CLAUDE_CODE_OAUTH_TOKEN: "t", ANTHROPIC_API_KEY: "k", EXTRACT_BACKEND: "api" }, () => expect(extractBackend()).toBe("api"));
+    withEnv({ CLAUDE_CODE_OAUTH_TOKEN: undefined, ANTHROPIC_API_KEY: undefined, EXTRACT_BACKEND: undefined }, () => expect(() => extractBackend()).toThrow(/credentials/));
+  });
+});

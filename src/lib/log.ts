@@ -12,7 +12,7 @@ const SECRET_PATTERNS: [RegExp, string][] = [
 export function redact(input: string): string {
   let out = input;
   for (const [re, rep] of SECRET_PATTERNS) out = out.replace(re, rep);
-  for (const name of ["ANTHROPIC_API_KEY", "QUICKET_API_KEY", "GITHUB_TOKEN"]) {
+  for (const name of ["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "QUICKET_API_KEY", "GITHUB_TOKEN"]) {
     const v = process.env[name];
     if (v && v.length >= 8) out = out.split(v).join(`[${name}]`);
   }

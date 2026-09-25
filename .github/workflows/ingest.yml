@@ -61,11 +61,15 @@ jobs:
           path: data/raw
           key: raw-${{ hashFiles('data/manifest.json') }}
 
+      # Billed to your Claude subscription via headless Claude Code when
+      # CLAUDE_CODE_OAUTH_TOKEN is set (from `claude setup-token`); falls back
+      # to per-token API billing with ANTHROPIC_API_KEY. Set one of the two.
       - name: Extract
         id: extract
         if: ${{ !cancelled() }}
         run: pnpm run extract
         env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Normalise

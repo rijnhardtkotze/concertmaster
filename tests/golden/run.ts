@@ -2,7 +2,7 @@
  * Golden set: run the real extract → normalise path over hand-labelled
  * fixtures and report per-field accuracy against tests/golden/results/baseline.json.
  *
- *   pnpm run golden                     # live run (needs ANTHROPIC_API_KEY)
+ *   pnpm run golden                     # live run (needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY)
  *   pnpm run golden -- --case jpo-heritage-day
  *   pnpm run golden -- --recorded       # re-score the last live outputs; no API calls
  *   pnpm run golden -- --save-baseline  # accept this run as the new baseline
@@ -18,6 +18,7 @@ import { PATHS } from "../../src/lib/config.ts";
 import { sourceShingles } from "../../src/lib/guard.ts";
 import { sha256 } from "../../src/lib/hash.ts";
 import { readJson, writeJson } from "../../src/lib/json.ts";
+import { hasExtractCredentials } from "../../src/lib/llm.ts";
 import { normaliseEvent } from "../../src/lib/normalise.ts";
 import { loadSystemPrompt, promptVersion, tablesBlock } from "../../src/lib/prompt.ts";
 import { ComposerIndex, loadComposers, loadVenues, VenueIndex, venuesForPrompt } from "../../src/lib/reference.ts";
@@ -54,8 +55,8 @@ const pct = (x: number) => `${(x * 100).toFixed(0)}%`;
 async function main() {
   const args = parseArgs() as ReturnType<typeof parseArgs> & { case?: string; recorded?: boolean; "save-baseline"?: boolean; tolerance?: string };
   const recorded = args.recorded === true;
-  if (!recorded && !process.env.ANTHROPIC_API_KEY) {
-    console.log("golden: ANTHROPIC_API_KEY not set; skipping live run (use --recorded to re-score the last run).");
+  if (!recorded && !hasExtractCredentials()) {
+    console.log("golden: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY; skipping live run (use --recorded to re-score the last run).");
     return;
   }
   const sources = new Map((await loadSources()).map((s) => [s.slug, s]));

@@ -26,8 +26,8 @@ jobs:
       - run: pnpm run check-secrets
 
   golden:
-    # Live extraction over tests/golden/cases. Costs a few cents; skipped when the
-    # secret isn't available (e.g. PRs from forks). Per-field table lands in the job summary.
+    # Live extraction over tests/golden/cases (two calls per case, on the subscription
+    # or a few cents of API); skipped when neither secret is available (e.g. PRs from forks). Per-field table lands in the job summary.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: github.event_name == 'pull_request'
@@ -41,4 +41,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run golden
         env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

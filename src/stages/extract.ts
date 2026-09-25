@@ -4,7 +4,7 @@ import { EXTRACT, PATHS } from "../lib/config.ts";
 import { readExtracted, removeExtracted, writeExtracted, type ExtractedFile } from "../lib/extracted.ts";
 import { copiedSpan, sourceShingles } from "../lib/guard.ts";
 import { docId } from "../lib/hash.ts";
-import { callExtractor, FatalLlmError } from "../lib/llm.ts";
+import { callExtractor, extractBackend, FatalLlmError } from "../lib/llm.ts";
 import { errorMessage, logger } from "../lib/log.ts";
 import { documentBlock, loadSystemPrompt, promptVersion, tablesBlock } from "../lib/prompt.ts";
 import { loadComposers, loadVenues, venuesForPrompt } from "../lib/reference.ts";
@@ -160,9 +160,14 @@ async function main() {
   };
 
   try {
+    // Fail fast (and loudly) with no credentials, but only if there is work to do.
+    const backend = jobs.length ? extractBackend() : "api";
+    if (jobs.length) log.info(`${jobs.length} documents to extract via ${backend === "subscription" ? "Claude subscription (Claude Code)" : "Anthropic API"}`);
+    // Subscription usage shares limits with interactive use; go easy on it.
+    const concurrency = backend === "subscription" ? 1 : EXTRACT.concurrency;
     const queue = [...jobs];
     await Promise.all(
-      Array.from({ length: Math.min(EXTRACT.concurrency, queue.length) }, async () => {
+      Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
         for (let j = queue.shift(); j; j = queue.shift()) await runJob(j);
       }),
     );
@@ -175,7 +180,7 @@ async function main() {
     (t, s) => ({ calls: t.calls + (s.llm_calls ?? 0), skipped: t.skipped + (s.llm_skipped ?? 0), cost: t.cost + (s.cost_usd ?? 0) }),
     { calls: 0, skipped: 0, cost: 0 },
   );
-  log.info(`${totals.calls} LLM calls made, ${totals.skipped} documents skipped (content unchanged), ~$${totals.cost.toFixed(3)}`);
+  log.info(`${totals.calls} LLM calls made, ${totals.skipped} documents skipped (content unchanged), ~$${totals.cost.toFixed(3)} API spend`);
   writeStats("extract", { sources: stats, totals, fatal });
   if (fatal) process.exit(1);
 }
