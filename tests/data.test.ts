@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PATHS } from "../src/lib/config.ts";
-import { loadComposers, loadVenues } from "../src/lib/reference.ts";
+import { loadComposers, loadVenues, VenueIndex } from "../src/lib/reference.ts";
 import { Event, PROVINCES } from "../src/lib/schema.ts";
 import { loadSources } from "../src/lib/sources.ts";
 import { normalise } from "../src/lib/text.ts";
@@ -23,6 +23,22 @@ describe("committed data", () => {
         names.set(k, v.venue_id);
       }
     }
+  });
+
+  it("venues.json resolves the spellings sources actually print", () => {
+    const index = new VenueIndex(loadVenues());
+    const cases: [{ name: string; address?: string; city?: string }, string][] = [
+      // Mzansi Chamber Music Collective: its own pages, then Quicket's venue records.
+      [{ name: "Northwards House", city: "Johannesburg" }, "northwards-house"],
+      [{ name: "Shed & Silo", city: "Benoni" }, "shed-and-silo"],
+      [{ name: "St Stithians College Chapel", city: "Sandton" }, "st-stithians-chapel"],
+      [{ name: "The Shed and Silo Country Restaurant", address: "Thomas Road 77", city: "Benoni" }, "shed-and-silo"],
+      [
+        { name: "St Stithians College Chapel - Use Bishop Malinga Gate at 40 Peter Place, Lyme Park, Sandton", address: "40 Peter Place, Sandton" },
+        "st-stithians-chapel",
+      ],
+    ];
+    for (const [v, id] of cases) expect(index.resolve(v)?.venue_id, v.name).toBe(id);
   });
 
   it("composers-sa.json: a sorted list of unique names", () => {

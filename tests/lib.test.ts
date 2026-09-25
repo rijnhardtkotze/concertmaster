@@ -154,6 +154,8 @@ describe("adapters", () => {
       organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/47792-chamber-music-collective" },
     };
     expect(quicketMatches(listed, cfg)).toBe(true);
+    // ...and so it's the only place the presenter is named.
+    expect(renderQuicketEvent(listed)).toContain("Organiser page: <https://www.quicket.co.za/organisers/47792-chamber-music-collective>");
     expect(quicketMatches({ ...listed, organiser: { id: 0, name: null, organiserPageUrl: "https://www.quicket.co.za/organisers/16617-x" } }, cfg)).toBe(false);
     const text = renderQuicketEvent(e);
     expect(text).toContain("Event page: https://www.quicket.co.za/events/392145-x/");

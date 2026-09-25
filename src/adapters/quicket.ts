@@ -44,7 +44,11 @@ export function renderQuicketEvent(e: QuicketEvent): string {
   if (v?.latitude && v?.longitude) lines.push(`Venue coordinates: ${v.latitude}, ${v.longitude}`);
   const loc = e.locality;
   if (loc) lines.push(`Locality: ${[loc.levelThree, loc.levelTwo, loc.levelOne].filter(Boolean).join(", ")}`);
-  if (e.organiser?.name) lines.push(`Organiser: ${e.organiser.name}${e.organiser.organiserPageUrl ? ` <${e.organiser.organiserPageUrl}>` : ""}`);
+  // The list endpoint never fills in organiser.name; the page URL's slug is then the only
+  // place the presenter is named ("/organisers/47792-chamber-music-collective").
+  const org = e.organiser;
+  if (org?.name) lines.push(`Organiser: ${org.name}${org.organiserPageUrl ? ` <${org.organiserPageUrl}>` : ""}`);
+  else if (org?.organiserPageUrl) lines.push(`Organiser page: <${org.organiserPageUrl}>`);
   if (e.categories?.length) lines.push(`Categories: ${e.categories.map((c) => c.name).join(", ")}`);
   if (e.tickets?.length) {
     lines.push("Tickets:");
