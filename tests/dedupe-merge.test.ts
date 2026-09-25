@@ -151,11 +151,17 @@ describe("merge", () => {
     expect(r.counts.unconfirmed).toBe(1);
   });
 
-  it("leaves unseen events alone when extraction didn't finish", () => {
-    const first = merge({ ...base, incoming: [presenter()], published: [] }).published;
-    const r = merge({ ...base, incoming: [], published: first, extractionComplete: false });
-    expect(r.published[0]!.status).toBe("scheduled");
-    expect(r.counts.unconfirmed).toBe(0);
+  it("keeps each performance's id when one of two close performances disappears", () => {
+    const early = event({ start: "2026-10-15T19:00:00+02:00" });
+    const late = event({ start: "2026-10-15T19:30:00+02:00" });
+    const both = dedupe([early, late], V, roles).events;
+    const first = merge({ ...base, incoming: both, published: [] }).published;
+    const idAt = (list: typeof first, t: string) => list.find((e) => e.start.startsWith(t) && e.status !== "unconfirmed")?.id;
+    const earlyId = idAt(first, "2026-10-15T19:00");
+    // The 19:30 performance goes; the 19:00 one is now alone, so its key loses the time suffix.
+    const r = merge({ ...base, incoming: dedupe([early], V, roles).events, published: first });
+    expect(idAt(r.published, "2026-10-15T19:00")).toBe(earlyId);
+    expect(r.published.find((e) => e.start.startsWith("2026-10-15T19:30"))?.status).toBe("unconfirmed");
   });
 
   it("counts a pending change to a published event as new review work once, not every run", () => {

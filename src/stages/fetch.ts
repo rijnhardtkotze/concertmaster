@@ -6,6 +6,7 @@ import { FETCH } from "../lib/config.ts";
 import { docId, sha256 } from "../lib/hash.ts";
 import { PoliteClient, RobotsDisallowed } from "../lib/http.ts";
 import { errorMessage, logger } from "../lib/log.ts";
+import { readExtracted } from "../lib/extracted.ts";
 import { loadSources, parseArgs, type SourceConfig } from "../lib/sources.ts";
 import {
   bump,
@@ -34,6 +35,7 @@ function makeContext(
   kept: Set<string>,
   /** The source's live documents after its last run. Only these can be kept. */
   live: ReadonlySet<string>,
+  consecutiveFailures: number,
 ): AdapterContext {
   return {
     // Manifest entries outlive a page's removal from the live set (its extraction is
@@ -43,7 +45,13 @@ function makeContext(
       kept.add(url);
       return true;
     },
-    previousDocuments: () => [...live],
+    upcomingDocuments: () =>
+      [...live].filter((url) => {
+        const entry = manifest[url];
+        const file = entry ? readExtracted(source.slug, entry.doc_id) : null;
+        return !!file?.events.some((e) => typeof e.start === "string" && Date.parse(e.start) > Date.now());
+      }),
+    consecutiveFailures,
     client,
     manifest,
     warn: (msg) => {
@@ -110,7 +118,7 @@ async function runSource(
     // Check the source's own homepage first so a blanket disallow skips the whole source.
     await client.checkRobots(source.adapter.type === "html" ? source.adapter.startUrls[0]! : source.homepage);
     const kept = new Set<string>();
-    const docs = await adapter(source, makeContext(client, manifest, source, stats, kept, new Set(status.documents)));
+    const docs = await adapter(source, makeContext(client, manifest, source, stats, kept, new Set(status.documents), status.consecutive_failures));
     const unique = new Map(docs.map((d) => [d.url, d]));
     if (!unique.size && !kept.size && !source.allowEmpty) {
       throw new Error("0 documents discovered; the listing layout or selector has probably changed");

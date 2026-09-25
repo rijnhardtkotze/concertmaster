@@ -35,8 +35,10 @@ export interface AdapterContext {
    * have never fetched, which are simply skipped.
    */
   keepPrevious(url: string): boolean;
-  /** The source's live document URLs as of its last run. */
-  previousDocuments(): string[];
+  /** Documents live after the source's last run whose committed extraction still lists an upcoming event. */
+  upcomingDocuments(): string[];
+  /** Runs in a row this source has failed (0 after a success). */
+  consecutiveFailures: number;
 }
 
 export type Adapter = (source: SourceConfig, ctx: AdapterContext) => Promise<FetchedDocument[]>;

@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { extractText, getDocumentProxy } from "unpdf";
-import { FETCH } from "../lib/config.ts";
+import { FETCH, RULES } from "../lib/config.ts";
 import { HttpError } from "../lib/http.ts";
 import { errorMessage } from "../lib/log.ts";
 import type { HtmlAdapterConfig, SourceConfig } from "../lib/sources.ts";
@@ -108,11 +108,15 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
   }
 
   if (cfg.follow && !detailUrls.length) {
-    // Detail pages that were live last run and now vanish all at once look far more like a
-    // broken selector or a bad response than a season ending. Fail the source, which keeps
-    // its last documents (and opens an issue if it persists), instead of withdrawing them.
-    const known = ctx.previousDocuments().filter((u) => !pages.includes(u));
-    if (known.length) throw new Error(`follow selector "${cfg.follow.selector}" matched no links, but ${known.length} detail page(s) were live last run; keeping them`);
+    // Detail pages with concerts still to come that all vanish at once look more like a broken
+    // selector or a bad response than real withdrawals. Fail the source (keeping them) for up
+    // to RULES.failuresBeforeIssue runs; by then a "Source failing" issue is open, and after
+    // that an empty listing is believed, so a genuinely withdrawn last concert does go
+    // unconfirmed. A season that simply ended (only past concerts) never trips this.
+    const upcoming = ctx.upcomingDocuments().filter((u) => !pages.includes(u));
+    if (upcoming.length && ctx.consecutiveFailures < RULES.failuresBeforeIssue) {
+      throw new Error(`follow selector "${cfg.follow.selector}" matched no links, but ${upcoming.length} page(s) with upcoming concerts were live last run; keeping them`);
+    }
     ctx.warn(`follow selector "${cfg.follow.selector}" matched no links; layout change or simply nothing listed`);
   }
   const max = cfg.follow?.max ?? FETCH.defaultMaxDocuments;

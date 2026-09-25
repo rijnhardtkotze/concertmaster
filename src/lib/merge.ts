@@ -47,12 +47,6 @@ export function merge(opts: {
   decisions: ReviewDecisions;
   venues: VenueIndex;
   now: Date;
-  /**
-   * False when extraction stopped early (expired token, usage limit). Some documents then
-   * have no fresh extraction, so an event missing from today's input may just be unprocessed:
-   * published events are kept as they are instead of being marked unconfirmed.
-   */
-  extractionComplete?: boolean;
 }) {
   const nowIso = toSast(opts.now);
   const queuedBefore = new Map(opts.queue.map((e) => [e.id, contentFingerprint(e)]));
@@ -64,15 +58,22 @@ export function merge(opts: {
   const findPrior = (e: Event) => {
     const exact = prior.get(e.id);
     if (exact && !matched.has(e.id)) return exact;
+    // Closest start time first, then best title: when two performances of a show are listed
+    // close together (19:00 and 19:30) and one disappears, the one left keeps its own id
+    // rather than taking over the other's.
     let best: { event: Event; published: boolean } | undefined;
-    let bestScore = RULES.fuzzyTitleThreshold;
+    let bestGap = Infinity;
+    let bestScore = 0;
     for (const p of prior.values()) {
       if (matched.has(p.event.id) || localDate(p.event.start) !== localDate(e.start)) continue;
-      if (Math.abs(Date.parse(p.event.start) - Date.parse(e.start)) > 60 * 60_000) continue;
+      const gap = Math.abs(Date.parse(p.event.start) - Date.parse(e.start));
+      if (gap > 60 * 60_000) continue;
       if (!sameVenue(p.event, e, opts.venues)) continue;
       const s = titleSimilarity(p.event.title, e.title);
-      if (s >= bestScore) {
+      if (s < RULES.fuzzyTitleThreshold) continue;
+      if (gap < bestGap || (gap === bestGap && s > bestScore)) {
         best = p;
+        bestGap = gap;
         bestScore = s;
       }
     }
@@ -129,10 +130,6 @@ export function merge(opts: {
   for (const p of prior.values()) {
     if (matched.has(p.event.id) || !p.published) continue; // vanished queue items are simply dropped
     const e = p.event;
-    if (opts.extractionComplete === false) {
-      published.push(e);
-      continue;
-    }
     if (Date.parse(e.start) > opts.now.getTime() && e.status !== "unconfirmed" && e.status !== "cancelled") {
       published.push(canonicalEvent({ ...e, status: "unconfirmed", last_updated: nowIso }));
       count(e, "unconfirmed");

@@ -93,15 +93,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      # If extraction stopped early (expired token, usage limit), some documents have no fresh
-      # output; merge then leaves events it didn't see alone rather than marking them unconfirmed.
-      # Whatever did get extracted is still committed, so a daily usage limit can't stall progress.
+      # Runs even if extraction stopped early (expired token, usage limit): a document that
+      # wasn't reached keeps its last extraction, so its events stay as they were. Only a page
+      # fetch confirmed gone, or one re-extracted without the event, makes an event vanish.
+      # Whatever did get extracted is committed, so a daily usage limit can't stall progress.
       - name: Merge
         id: merge
         if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
         run: pnpm run merge
-        env:
-          EXTRACT_COMPLETE: ${{ steps.extract.outcome == 'success' }}
 
       - name: Summary
         if: ${{ !cancelled() }}

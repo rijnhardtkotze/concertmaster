@@ -210,7 +210,8 @@ describe("review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: (m: string) => warnings.push(m),
-      previousDocuments: () => [],
+      upcomingDocuments: () => [],
+      consecutiveFailures: 0,
       keepPrevious: (u: string) => (u.endsWith("/b/") || u.endsWith("/d/") ? (kept.push(u), true) : false),
       getBody: async (u: string) => {
         if (u.endsWith("/b/") || u.endsWith("/c/")) throw new Error("HTTP 503");
@@ -236,7 +237,8 @@ describe("review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: () => {},
-      previousDocuments: () => [],
+      upcomingDocuments: () => [],
+      consecutiveFailures: 0,
       keepPrevious: (u: string) => (u.endsWith("/c/") ? (kept.push(u), true) : false),
       getBody: async (u: string) => {
         fetched.push(u);
@@ -314,7 +316,8 @@ describe("more review fixes", async () => {
       client: null as never,
       manifest: {},
       warn: () => {},
-      previousDocuments: () => [],
+      upcomingDocuments: () => [],
+      consecutiveFailures: 0,
       keepPrevious: () => false,
       getBody: async (u: string) => {
         fetched.push(u);
@@ -344,7 +347,7 @@ describe("more review fixes", async () => {
 describe("crawl boundaries", async () => {
   const { htmlAdapter } = await import("../src/adapters/html.ts");
   const { isPublicHost } = await import("../src/lib/url.ts");
-  const ctxFor = (bodies: Record<string, string>, previous: string[] = []) => {
+  const ctxFor = (bodies: Record<string, string>, previous: string[] = [], consecutiveFailures = 0) => {
     const fetched: string[] = [];
     return {
       fetched,
@@ -353,7 +356,8 @@ describe("crawl boundaries", async () => {
         manifest: {},
         warn: () => {},
         keepPrevious: () => false,
-        previousDocuments: () => previous,
+        upcomingDocuments: () => previous,
+        consecutiveFailures,
         getBody: async (u: string) => {
           fetched.push(u);
           return { body: Buffer.from(bodies[u] ?? "<main>Concert</main>"), contentType: "text/html", finalUrl: u, etag: null, lastModified: null, notModified: false };
@@ -377,9 +381,12 @@ describe("crawl boundaries", async () => {
 
   it("fails the source instead of withdrawing its pages when a listing suddenly matches nothing", async () => {
     const { ctx } = ctxFor({ "https://www.ex.org/list": "<main>maintenance</main>" }, ["https://www.ex.org/a/"]);
-    await expect(htmlAdapter(src(), ctx)).rejects.toThrow(/matched no links, but 1 detail page/);
+    await expect(htmlAdapter(src(), ctx)).rejects.toThrow(/matched no links, but 1 page\(s\) with upcoming concerts/);
     const fresh = ctxFor({ "https://www.ex.org/list": "<main>nothing yet</main>" });
     await expect(htmlAdapter(src(), fresh.ctx)).resolves.toEqual([]);
+    // After enough failed runs (an issue is open by then) the empty listing is believed.
+    const later = ctxFor({ "https://www.ex.org/list": "<main>maintenance</main>" }, ["https://www.ex.org/a/"], 3);
+    await expect(htmlAdapter(src(), later.ctx)).resolves.toEqual([]);
   });
 
   it("keeps a Quicket run whose first night has passed but a later performance hasn't", () => {
