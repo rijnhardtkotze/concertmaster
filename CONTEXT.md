@@ -30,16 +30,20 @@ _Avoid_: Organiser, promoter, host
 A performing group credited on a Production: an orchestra, choir or chamber group.
 _Avoid_: Band, group, company
 
+**Person**:
+One human being in the listings, whether they compose, perform or both. An SA composer-pianist is one Person.
+_Avoid_: Individual, contact
+
 **Artist**:
-One person credited on a Production, such as a conductor, soloist or accompanist.
+A Person in a performing role on a Production, such as conductor, soloist or accompanist. Artist is a role, not a separate record.
 _Avoid_: Performer, musician
 
 **Credit**:
-The link between a Production and an Ensemble or Artist, with the role they play in it (for example "conductor" or "orchestra").
+The link between a Production and an Ensemble or Person, with the role they play in it (for example "conductor" or "orchestra").
 _Avoid_: Billing, cast
 
 **Composer**:
-The person who wrote a Work.
+A Person in the role of having written a Work. Composer is a role, not a separate record.
 _Avoid_: Author
 
 **Work**:
@@ -54,11 +58,27 @@ _Avoid_: Setlist, repertoire
 A place Performances happen, drawn from a curated list that includes each venue's known alternative names. A Performance at a venue that isn't on the list waits in the Review queue until that venue is approved.
 _Avoid_: Location, hall, space
 
+**Performance status**:
+Whether a Performance is scheduled, cancelled, postponed or sold out, as its sources state. A missing status means scheduled.
+_Avoid_: State
+
+**Unlisted**:
+A Performance that has been missing from all its sources for three runs in a row. It is hidden from the site and noted in the Review issue, but never deleted.
+_Avoid_: Deleted, removed, expired
+
 **Upcoming**:
 A Performance whose start is at or after now. This is a view of the listings, not a rule about what is stored: Performances up to 7 days in the past are kept.
 _Avoid_: Future, current, live
 
 ## Ingestion
+
+**Source**:
+One place we fetch listings from, such as the JPO's website or the Quicket API. Each Source has exactly one Source role.
+_Avoid_: Feed, site, provider
+
+**Source role**:
+What a Source is in relation to the listings it publishes: presenter, venue, aggregator or vendor, in that order of authority. When sources disagree on a field, the higher role wins, and between equal roles the most recently fetched Extraction wins.
+_Avoid_: Source type, priority
 
 **Fetch record**:
 The log of one attempt to fetch one source document: URL, content hash, time, HTTP status and robots decision. It never holds the document's body.
