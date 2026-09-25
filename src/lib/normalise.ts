@@ -108,8 +108,10 @@ export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContex
       e.tickets.url = null;
       review.add("tickets.url");
     } else if (e.tickets.url) e.tickets.url = canonicalUrl(e.tickets.url);
-    e.tickets.currency = "ZAR";
-    const { price_min: lo, price_max: hi } = e.tickets;
+    const known = Object.entries(e.tickets).filter(([k, v]) => k !== "currency" && v !== null && v !== undefined);
+    if (known.length) e.tickets.currency = "ZAR";
+    else delete e.tickets;
+    const { price_min: lo, price_max: hi } = e.tickets ?? {};
     if (typeof lo === "number" && typeof hi === "number" && lo > hi) reasons.push(`price_min ${lo} > price_max ${hi}`);
   }
 

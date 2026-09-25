@@ -1,0 +1,309 @@
+[
+  {
+    "venue_id": "artscape-opera-house",
+    "name": "Artscape Opera House",
+    "aliases": [
+      "Artscape Opera House, Cape Town"
+    ],
+    "address": "DF Malan Street, Foreshore",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "artscape-theatre",
+    "name": "Artscape Theatre",
+    "aliases": [],
+    "address": "DF Malan Street, Foreshore",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "baxter-concert-hall",
+    "name": "Baxter Concert Hall",
+    "aliases": [
+      "Baxter Theatre Concert Hall"
+    ],
+    "address": null,
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "cape-town-city-hall",
+    "name": "Cape Town City Hall",
+    "aliases": [
+      "City Hall, Cape Town",
+      "City Hall Cape Town"
+    ],
+    "address": "Darling Street",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "durban-city-hall",
+    "name": "Durban City Hall",
+    "aliases": [
+      "City Hall, Durban",
+      "City Hall Durban"
+    ],
+    "address": null,
+    "city": "Durban",
+    "province": "KwaZulu-Natal",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "endler-hall",
+    "name": "Endler Hall",
+    "aliases": [
+      "Endler Concert Hall",
+      "Endler"
+    ],
+    "address": null,
+    "city": "Stellenbosch",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "feather-market-centre",
+    "name": "Feather Market Centre",
+    "aliases": [
+      "Feather Market Hall"
+    ],
+    "address": null,
+    "city": "Gqeberha",
+    "province": "Eastern Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "fismer-hall",
+    "name": "Fismer Hall",
+    "aliases": [],
+    "address": null,
+    "city": "Stellenbosch",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "guild-theatre",
+    "name": "Guild Theatre",
+    "aliases": [],
+    "address": null,
+    "city": "East London",
+    "province": "Eastern Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "joburg-theatre",
+    "name": "Joburg Theatre",
+    "aliases": [
+      "Johannesburg Theatre"
+    ],
+    "address": null,
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "kirstenbosch",
+    "name": "Kirstenbosch National Botanical Garden",
+    "aliases": [
+      "Kirstenbosch",
+      "Kirstenbosch Gardens"
+    ],
+    "address": null,
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "linder-auditorium",
+    "name": "Linder Auditorium",
+    "aliases": [
+      "The Linder Auditorium",
+      "Linder",
+      "Wits Linder Auditorium"
+    ],
+    "address": "Wits Education Campus, 27 St Andrews Road, Parktown",
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "maynardville",
+    "name": "Maynardville Open-Air Theatre",
+    "aliases": [
+      "Maynardville",
+      "Maynardville Open Air Theatre"
+    ],
+    "address": null,
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "musaion",
+    "name": "Musaion",
+    "aliases": [
+      "UP Musaion",
+      "Musaion, University of Pretoria"
+    ],
+    "address": null,
+    "city": "Pretoria",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "odeion",
+    "name": "Odeion",
+    "aliases": [
+      "Odeion Concert Hall",
+      "UFS Odeion"
+    ],
+    "address": null,
+    "city": "Bloemfontein",
+    "province": "Free State",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "playhouse-durban",
+    "name": "The Playhouse",
+    "aliases": [
+      "Playhouse Theatre Durban",
+      "The Playhouse Company",
+      "Playhouse Opera"
+    ],
+    "address": null,
+    "city": "Durban",
+    "province": "KwaZulu-Natal",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "sa-state-theatre",
+    "name": "South African State Theatre",
+    "aliases": [
+      "State Theatre"
+    ],
+    "address": null,
+    "city": "Pretoria",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "soweto-theatre",
+    "name": "Soweto Theatre",
+    "aliases": [],
+    "address": null,
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "st-georges-cathedral",
+    "name": "St George's Cathedral",
+    "aliases": [
+      "St George's Cathedral, Cape Town"
+    ],
+    "address": null,
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "st-martini-lutheran-church",
+    "name": "St Martini Evangelical Lutheran Church",
+    "aliases": [
+      "St Martini Lutheran Church",
+      "St Martini Church"
+    ],
+    "address": "Long Street",
+    "city": "Cape Town",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "st-marys-cathedral-johannesburg",
+    "name": "St Mary's Cathedral",
+    "aliases": [
+      "St Mary's Anglican Cathedral"
+    ],
+    "address": null,
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "up-aula",
+    "name": "Aula Theatre",
+    "aliases": [
+      "UP Aula",
+      "Aula, University of Pretoria"
+    ],
+    "address": null,
+    "city": "Pretoria",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "vergelegen",
+    "name": "Vergelegen Wine Estate",
+    "aliases": [
+      "Vergelegen"
+    ],
+    "address": null,
+    "city": "Somerset West",
+    "province": "Western Cape",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "wits-great-hall",
+    "name": "Wits Great Hall",
+    "aliases": [
+      "Great Hall, Wits University",
+      "Wits University Great Hall"
+    ],
+    "address": null,
+    "city": "Johannesburg",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "venue_id": "zk-matthews-great-hall",
+    "name": "ZK Matthews Great Hall",
+    "aliases": [
+      "Unisa ZK Matthews Great Hall",
+      "ZK Matthews Hall"
+    ],
+    "address": null,
+    "city": "Pretoria",
+    "province": "Gauteng",
+    "lat": null,
+    "lng": null
+  }
+]
