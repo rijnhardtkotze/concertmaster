@@ -60,7 +60,7 @@ export class PoliteClient {
         let why = "";
         for (let attempt = 0; attempt < 2; attempt++) {
           try {
-            const res = await this.raw(url, {}, this.minIntervalMs);
+            const res = await this.fetchRobotsFile(url);
             // RFC 9309: 4xx means no restrictions. We make 401/403 an exception and
             // fail closed, because a site blocking robots.txt is telling us something.
             if (res.status === 401 || res.status === 403) return { unreachable: `HTTP ${res.status}` };
@@ -77,6 +77,24 @@ export class PoliteClient {
       this.robots.set(origin, p);
     }
     return p;
+  }
+
+  /**
+   * robots.txt itself, following redirects by hand: each hop must be a public host (unless
+   * this client allows private ones, as in tests) and is throttled by its own host.
+   * robots.txt isn't checked against robots.txt.
+   */
+  private async fetchRobotsFile(url: string): Promise<HttpResponse> {
+    let current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      const { hostname } = new URL(current);
+      if (!this.allowPrivateHosts && !isPublicHost(hostname)) throw new HttpError(`refusing to fetch non-public host ${hostname}`, 403);
+      const res = await this.raw(current, {}, this.minIntervalMs, "manual");
+      const location = res.headers.get("location");
+      if (![301, 302, 303, 307, 308].includes(res.status) || !location) return { ...res, url: current };
+      current = new URL(location, current).toString();
+    }
+    throw new HttpError(`too many redirects fetching ${redact(url)}`, 310);
   }
 
   /** Throws RobotsDisallowed if robots.txt forbids the URL or can't be read. */

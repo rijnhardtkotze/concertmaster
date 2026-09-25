@@ -80,7 +80,7 @@ export function merge(opts: {
       if (taken.has(p.event.id) || localDate(p.event.start) !== localDate(e.start)) continue;
       const gap = Math.abs(Date.parse(p.event.start) - Date.parse(e.start));
       if (gap > 60 * 60_000 || !sameVenue(p.event, e, opts.venues)) continue;
-      const score = Math.round(titleSimilarity(p.event.title, e.title) * 100) / 100;
+      const score = titleSimilarity(p.event.title, e.title);
       if (score >= RULES.fuzzyTitleThreshold) list.push({ p, score, gap });
     }
     if (list.length) candidates.set(e, list.sort((x, y) => y.score - x.score || x.gap - y.gap));
@@ -215,7 +215,7 @@ function assignGroup<P extends { event: Event }>(group: Event[], candidates: Map
       if (used.has(c.p.event.id)) continue;
       used.add(c.p.event.id);
       picks.push(c);
-      walk(i + 1, [total[0] + 1, Math.round((total[1] + c.score) * 100) / 100, total[2] + c.gap]);
+      walk(i + 1, [total[0] + 1, total[1] + c.score, total[2] + c.gap]);
       picks.pop();
       used.delete(c.p.event.id);
     }

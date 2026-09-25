@@ -61,6 +61,27 @@ describe("PoliteClient redirects", () => {
     expect(res.body.toString()).toContain("ok");
   });
 
+  it("follows a robots.txt redirect by hand and applies the file it lands on", async () => {
+    const c = http.createServer((req, res) => {
+      hits.push(`c${req.url}`);
+      if (req.url === "/robots.txt") return res.writeHead(301, { location: `${bUrl}/robots.txt` }).end();
+      res.end("c");
+    });
+    const cUrl = await listen(c);
+    try {
+      const client = new PoliteClient(0, undefined, true);
+      await expect(client.get(`${cUrl}/private/x`)).rejects.toBeInstanceOf(RobotsDisallowed); // b's rules
+      expect(hits).not.toContain("c/private/x");
+      expect((await client.get(`${cUrl}/open`)).body.toString()).toBe("c");
+    } finally {
+      c.close();
+    }
+  });
+
+  it("refuses a private host, including for robots.txt, unless the client allows it", async () => {
+    await expect(new PoliteClient(0).get(`${aUrl}/fine`)).rejects.toThrow(/non-public host/);
+  });
+
   it("stops reading at the size cap even without a Content-Length header", async () => {
     const client = new PoliteClient(0, 256 * 1024, true);
     await expect(client.get(`${aUrl}/huge`)).rejects.toThrow(/too large/);
