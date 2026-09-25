@@ -55,6 +55,20 @@ describe("normaliseEvent", () => {
     expect(r.event.needs_review).toContain("programme.1.composer");
   });
 
+  it("does not trust a venue_id the venue text contradicts", () => {
+    // Model says Cape Town City Hall, the page says the Linder in Johannesburg: the text wins, flagged.
+    const wrong = normaliseEvent(rawEvent({ venue: { venue_id: "cape-town-city-hall", name: "The Linder Auditorium", address: null, city: "Johannesburg", province: "Gauteng", lat: null, lng: null } }), doc(), ctx());
+    expect(wrong.ok && wrong.event.venue.venue_id).toBe("linder-auditorium");
+    expect(wrong.ok && wrong.event.needs_review).toContain("venue.venue_id");
+    // An id with no textual support and a different city is dropped, also flagged.
+    const far = normaliseEvent(rawEvent({ venue: { venue_id: "cape-town-city-hall", name: "Some Church Hall", address: null, city: "Durban", province: "KwaZulu-Natal", lat: null, lng: null } }), doc(), ctx());
+    expect(far.ok && far.event.venue.venue_id).toBeFalsy();
+    expect(far.ok && far.event.needs_review).toContain("venue.venue_id");
+    // Agreeing id and text: no flag.
+    const fine = normaliseEvent(rawEvent({ venue: { venue_id: "linder-auditorium", name: "Linder", address: null, city: "Johannesburg", province: "Gauteng", lat: null, lng: null } }), doc(), ctx());
+    expect(fine.ok && fine.event.needs_review).not.toContain("venue.venue_id");
+  });
+
   it("does not resolve a venue alias when the city contradicts it", () => {
     const r = normaliseEvent(rawEvent({ venue: { venue_id: null, name: "City Hall, Cape Town", address: null, city: "Durban", province: "KwaZulu-Natal", lat: null, lng: null } }), doc(), ctx());
     expect(r.ok && r.event.venue.venue_id).toBeFalsy();

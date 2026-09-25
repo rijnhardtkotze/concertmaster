@@ -74,22 +74,28 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      # Normalise works from the committed extractions, so it runs even if fetch or
+      # extract failed. Everything after it needs its predecessor's output: a missing
+      # .work file must never reach merge (it would read as "every event vanished").
       - name: Normalise
+        id: normalise
         if: ${{ !cancelled() }}
         run: pnpm run normalise
 
       - name: Dedupe
-        if: ${{ !cancelled() }}
+        id: dedupe
+        if: ${{ !cancelled() && steps.normalise.outcome == 'success' }}
         run: pnpm run dedupe
 
       - name: Read review decisions from the issue
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
         run: pnpm run review-sync
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
       - name: Merge
-        if: ${{ !cancelled() }}
+        id: merge
+        if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
         run: pnpm run merge
 
       - name: Summary
@@ -100,8 +106,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: node scripts/check-secrets.mjs --all
 
+      # Only commit a complete run. If merge didn't succeed, nothing is committed and the
+      # run is red; the next run starts again from the last good state.
       - name: Commit data
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.merge.outcome == 'success' }}
         run: |
           git add data/
           # Timestamps that move on every run don't count as a change.

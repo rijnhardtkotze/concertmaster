@@ -8,7 +8,7 @@ function fmtDate(iso: string) {
   return `${iso.slice(0, 10)} ${iso.slice(11, 16)}`;
 }
 
-function eventBlock(e: Event): string {
+function eventBlock(e: Event, ticked?: "approve" | "reject"): string {
   const lines = [`#### ${fmtDate(e.start)} · ${e.title}`];
   const where = [e.venue.name, e.venue.city].filter(Boolean).join(", ");
   const links = [`[${e.source.publisher}](${e.source.url})`, ...(e.source.secondary_urls ?? []).map((u, i) => `[alt ${i + 1}](${u})`)];
@@ -16,7 +16,7 @@ function eventBlock(e: Event): string {
   lines.push(`${where} · ${links.join(" · ")} · confidence **${e.confidence.toFixed(2)}**${e.status !== "scheduled" ? ` · status \`${e.status}\`` : ""}`);
   if (e.needs_review?.length) lines.push(`Check: ${e.needs_review.map((p) => `\`${p}\``).join(", ")}`);
   if (e.extraction_notes) lines.push(`> ${e.extraction_notes.replace(/\n/g, " ")}`);
-  lines.push(`- [ ] approve \`${e.id}\``, `- [ ] reject \`${e.id}\``);
+  lines.push(`- [${ticked === "approve" ? "x" : " "}] approve \`${e.id}\``, `- [${ticked === "reject" ? "x" : " "}] reject \`${e.id}\``);
   return lines.join("\n");
 }
 
@@ -24,7 +24,12 @@ function eventBlock(e: Event): string {
  * The review issue body. Regenerated in full every run; ticked boxes are read
  * back by review-sync *before* merge, so nothing a reviewer ticks is lost.
  */
-export function renderReviewIssue(queue: Event[], rejects: Reject[], runLink: string | null): string {
+/**
+ * `carryTicks`: boxes ticked in the current issue that no run has recorded yet (a failed
+ * review-sync, or a tick made mid-run). They are rendered ticked again so a rewrite of
+ * the issue never throws a reviewer's decision away.
+ */
+export function renderReviewIssue(queue: Event[], rejects: Reject[], runLink: string | null, carryTicks: Map<string, "approve" | "reject"> = new Map()): string {
   const head = [
     REVIEW_MARKER,
     `**${queue.length} event${queue.length === 1 ? "" : "s"} waiting for review.** Tick **approve** to publish as-is or **reject** to keep it off the site. ` +
@@ -35,7 +40,7 @@ export function renderReviewIssue(queue: Event[], rejects: Reject[], runLink: st
     "",
   ].join("\n");
 
-  const blocks = queue.map(eventBlock);
+  const blocks = queue.map((e) => eventBlock(e, carryTicks.get(e.id)));
   let rejectSection = "";
   if (rejects.length) {
     const items = rejects.map((r) => `- **${r.title ?? "(untitled)"}** ${r.start ? `(${r.start.slice(0, 16)})` : ""} [${r.source}](${r.url}): ${r.reasons.join("; ")}`);

@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { sortEvents } from "../lib/canonical.ts";
 import { PATHS, RULES } from "../lib/config.ts";
 import { dedupe } from "../lib/dedupe.ts";
@@ -13,6 +14,7 @@ const log = logger("dedupe");
 async function main() {
   const sources = await loadSources();
   const roles: Record<string, SourceRole> = Object.fromEntries(sources.map((s) => [s.slug, s.role]));
+  if (!fs.existsSync(PATHS.normalised)) throw new Error(`${PATHS.normalised} is missing; run normalise first`);
   const input = readJson<Event[]>(PATHS.normalised, []);
   const { events, fuzzy } = dedupe(input, new VenueIndex(loadVenues()), roles, RULES.fuzzyTitleThreshold);
 

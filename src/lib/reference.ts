@@ -52,8 +52,27 @@ export class VenueIndex {
    * Cape Town City Hall).
    */
   resolve(v: { venue_id?: string | null; name: string; address?: string | null; city?: string | null }): VenueRecord | undefined {
-    const byId = this.get(v.venue_id);
-    if (byId) return byId;
+    return this.resolveWithCheck(v).venue;
+  }
+
+  /**
+   * Resolution plus a flag for review. The name/address/city the source printed decide;
+   * a venue_id claimed by the extractor is only a fallback, and is flagged when the text
+   * doesn't back it up (or points at a different venue). A confident model that picks the
+   * wrong table row must not silently move a concert across town.
+   */
+  resolveWithCheck(v: { venue_id?: string | null; name: string; address?: string | null; city?: string | null }): {
+    venue: VenueRecord | undefined;
+    flag: boolean;
+  } {
+    const claimed = this.get(v.venue_id);
+    const byText = this.resolveByText(v);
+    if (byText) return { venue: byText, flag: !!v.venue_id && claimed !== byText };
+    if (claimed && v.city && citiesAgree(claimed.city, v.city)) return { venue: claimed, flag: true };
+    return { venue: undefined, flag: !!v.venue_id };
+  }
+
+  private resolveByText(v: { name: string; address?: string | null; city?: string | null }): VenueRecord | undefined {
     const exact = this.exact.get(normalise(v.name));
     if (exact && citiesAgree(exact.city, v.city)) return exact;
     const hay = ` ${normalise([v.name, v.address].filter(Boolean).join(" "))} `;

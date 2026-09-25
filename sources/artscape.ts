@@ -67,5 +67,7 @@ export default defineSource({
     type: "html",
     startUrls: ["https://www.artscape.co.za/wp-json/tribe/events/v1/events?per_page=50"],
     split: splitArtscape,
+    // The API pages at per_page and says where the next page is.
+    nextPage: (body) => (JSON.parse(body) as { next_rest_url?: string | null }).next_rest_url ?? null,
   },
 });

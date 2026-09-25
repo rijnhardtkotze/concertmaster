@@ -1,4 +1,4 @@
-import { PATHS, REVIEW_ISSUE_TITLE } from "../lib/config.ts";
+import { PATHS, REVIEW_ISSUE_TITLE, REVIEW_SYNC_MARKER } from "../lib/config.ts";
 import { GitHub } from "../lib/github.ts";
 import { readJson, writeJson } from "../lib/json.ts";
 import { errorMessage, logger } from "../lib/log.ts";
@@ -22,30 +22,31 @@ async function main() {
     return;
   }
   const issue = await gh.findOpenIssue(REVIEW_ISSUE_TITLE);
-  if (!issue?.body) {
-    log.info("no open review issue");
+  const ticked = parseDecisions(issue?.body ?? "");
+  if (!ticked.size) {
+    writeJson(REVIEW_SYNC_MARKER, { recorded: [] });
     return;
   }
-  const ticked = parseDecisions(issue.body);
-  if (!ticked.size) return;
 
   const queue = new Map(readJson<Event[]>(PATHS.reviewQueue, []).map((e) => [e.id, e]));
   const decisions = readJson<ReviewDecisions>(PATHS.reviewDecisions, {});
-  let applied = 0;
+  const recorded: string[] = [];
   for (const [id, decision] of ticked) {
     const e = queue.get(id);
     if (!e) continue; // already gone from the queue
     decisions[id] = { decision, decided_at: nowIso(), fingerprint: fingerprint(e), title: e.title };
-    applied++;
+    recorded.push(id);
   }
   // Old decisions refer to events long past; drop them to keep the file small.
   const cutoff = Date.now() - 400 * 86400_000;
   for (const [id, d] of Object.entries(decisions)) if (Date.parse(d.decided_at) < cutoff) delete decisions[id];
   writeJson(PATHS.reviewDecisions, decisions);
-  log.info(`${applied} review decision(s) recorded`);
+  writeJson(REVIEW_SYNC_MARKER, { recorded: recorded.sort() });
+  log.info(`${recorded.length} review decision(s) recorded`);
 }
 
 main().catch((err) => {
-  // Never block ingestion on the issue tracker.
-  log.annotate(`review sync failed: ${errorMessage(err)}`);
+  // Never block ingestion on the issue tracker. Unrecorded ticks aren't lost: notify
+  // carries them over when it rewrites the issue, and the next run records them.
+  log.annotate(`review sync failed (ticks stay in the issue for the next run): ${errorMessage(err)}`);
 });

@@ -10,6 +10,8 @@ import { canonicalUrl } from "../lib/url.ts";
 export { canonicalUrl };
 import type { Adapter, AdapterContext, FetchedDocument } from "./types.ts";
 
+const MAX_PAGES = 20;
+
 const isPdf = (contentType: string, url: string) => contentType.includes("application/pdf") || /\.pdf($|\?)/i.test(url);
 
 export async function pdfToText(buf: Buffer): Promise<string> {
@@ -43,13 +45,22 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
   const detailUrls: string[] = [];
   const extractStart = cfg.extractStartPages ?? (!cfg.follow && !cfg.split);
 
-  for (const start of cfg.startUrls) {
+  // Each start URL, plus any further pages its `nextPage` hook points to (fetched once each).
+  const pages: string[] = [];
+  const queue = cfg.startUrls.map((url) => ({ url, depth: 0, first: url }));
+  for (let item = queue.shift(); item; item = queue.shift()) {
+    const start = item.url;
+    if (pages.includes(start)) continue;
+    pages.push(start);
     const r = await ctx.getBody(start);
     const html = r.body.toString("utf8");
+    const next = cfg.nextPage?.(html, start);
+    if (next && item.depth + 1 < MAX_PAGES) queue.push({ url: next, depth: item.depth + 1, first: item.first });
+    else if (next) ctx.warn(`stopped following pages after ${MAX_PAGES} from ${item.first}`);
 
     if (cfg.split) {
-      for (const item of cfg.split(html, r.finalUrl)) {
-        docs.push({ url: item.url ?? `${start.split("#")[0]}#${encodeURIComponent(item.key)}`, kind: "text", text: item.text });
+      for (const piece of cfg.split(html, r.finalUrl)) {
+        docs.push({ url: piece.url ?? `${start.split("#")[0]}#${encodeURIComponent(piece.key)}`, kind: "text", text: piece.text });
       }
     }
 
@@ -68,7 +79,7 @@ export const htmlAdapter: Adapter = async (source: SourceConfig, ctx: AdapterCon
         if (cfg.follow!.include && !cfg.follow!.include.test(abs)) return;
         if (cfg.follow!.exclude && cfg.follow!.exclude.test(abs)) return;
         if (cfg.follow!.keep && !cfg.follow!.keep($(el).text().replace(/\s+/g, " ").trim())) return;
-        if (!detailUrls.includes(abs) && !cfg.startUrls.includes(abs)) detailUrls.push(abs);
+        if (!detailUrls.includes(abs) && !pages.includes(abs)) detailUrls.push(abs);
       });
     }
 

@@ -1,8 +1,8 @@
-import { PATHS, REVIEW_ISSUE_TITLE, RULES, SOURCE_ISSUE_PREFIX } from "../lib/config.ts";
+import { PATHS, REVIEW_ISSUE_TITLE, REVIEW_SYNC_MARKER, RULES, SOURCE_ISSUE_PREFIX } from "../lib/config.ts";
 import { GitHub, runUrl } from "../lib/github.ts";
 import { readJson } from "../lib/json.ts";
 import { errorMessage, logger, redact } from "../lib/log.ts";
-import { renderReviewIssue } from "../lib/review-issue.ts";
+import { parseDecisions, renderReviewIssue } from "../lib/review-issue.ts";
 import type { Event } from "../lib/schema.ts";
 import { loadSources } from "../lib/sources.ts";
 import { loadSourceStatus, type Reject } from "../lib/state.ts";
@@ -28,7 +28,13 @@ async function main() {
   const rejects = readJson<Reject[]>(PATHS.rejects, []);
   const review = open.find((i) => i.title === REVIEW_ISSUE_TITLE);
   if (queue.length || rejects.length) {
-    const body = redact(renderReviewIssue(queue, rejects, link));
+    // Ticks this run didn't record (review-sync failed, or a box was ticked while the run
+    // was going) are carried into the rewritten body. Ticks it did record are not: if that
+    // event is still in the queue, its content changed this run and needs a fresh look.
+    const synced = new Set(readJson<{ recorded: string[] }>(REVIEW_SYNC_MARKER, { recorded: [] }).recorded);
+    const pending = new Map([...parseDecisions(review?.body ?? "")].filter(([id]) => !synced.has(id)));
+    if (pending.size) log.warn(`${pending.size} review tick(s) not yet recorded; keeping them in the issue`);
+    const body = redact(renderReviewIssue(queue, rejects, link, pending));
     if (!review) log.info(`opened ${(await gh.createIssue(REVIEW_ISSUE_TITLE, body)).html_url}`);
     else if (review.body !== body) await gh.updateIssue(review.number, { body });
   } else if (review) {

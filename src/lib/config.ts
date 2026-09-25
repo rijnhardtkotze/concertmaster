@@ -74,4 +74,6 @@ export const RULES = {
 };
 
 export const REVIEW_ISSUE_TITLE = "Review queue";
+/** Written by review-sync on success: the event ids whose ticks it recorded this run. */
+export const REVIEW_SYNC_MARKER = PATHS.work + "/review-sync.json";
 export const SOURCE_ISSUE_PREFIX = "Source failing:";

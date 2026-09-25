@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import { defineSource, type SplitItem } from "../src/lib/sources.ts";
-import { now } from "../src/lib/time.ts";
+import { normaliseTimestamp, now } from "../src/lib/time.ts";
 import { htmlToText, slugify } from "../src/lib/text.ts";
 
 interface CalendarEntry {
@@ -25,9 +25,13 @@ export function splitCpoCalendar(html: string, pageUrl: string): SplitItem[] {
   const cutoff = now().getTime() - 24 * 3600_000;
   const items: SplitItem[] = [];
   for (const e of entries) {
-    const startMs = Date.parse(`${e.start.replace(" ", "T")}${e.start.length > 10 ? ":00" : "T00:00:00"}+02:00`);
-    const endMs = e.end ? Date.parse(`${e.end.replace(" ", "T").slice(0, 16)}${e.end.length > 10 ? ":00" : "T00:00:00"}+02:00`) : startMs;
-    if (Math.max(startMs, endMs || 0) < cutoff) continue;
+    // "2026-11-12", "2026-11-12 19:30" and "2026-11-12 19:30:00" all occur. Anything
+    // unparseable is kept (the extractor decides) rather than silently dropped.
+    const toMs = (s?: string) => (s ? Date.parse(normaliseTimestamp(s.slice(0, 19)) ?? "") : NaN);
+    const startMs = toMs(e.start);
+    const endMs = toMs(e.end);
+    const latest = Math.max(...[startMs, endMs].filter(Number.isFinite));
+    if (Number.isFinite(latest) && latest < cutoff) continue;
     const details = htmlToText(`<body>${e.description}</body>`, { baseUrl: pageUrl }).replace(/^PAGE TITLE:.*\n+/, "");
     const lines = [
       "CALENDAR ENTRY from the Cape Town Philharmonic Orchestra's concert calendar",

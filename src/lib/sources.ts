@@ -35,6 +35,8 @@ export interface HtmlAdapterConfig {
     /** Keep a link only if this returns true for its text (e.g. a genre label on a listing card). */
     keep?: (linkText: string) => boolean;
   };
+  /** For paginated listings/APIs: the next page's URL given this page's body, or null when done. */
+  nextPage?: (body: string, url: string) => string | null;
   /** Also send the start pages to the extractor (default: true when there is no `follow`). */
   extractStartPages?: boolean;
   /** Main-content selector for detail pages. Strips nav/footer noise, which also stabilises content hashes. */

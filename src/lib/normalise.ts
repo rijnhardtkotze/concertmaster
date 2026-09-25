@@ -69,8 +69,8 @@ export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContex
 
   // Venue: resolve aliases against venues.json.
   if (e.venue && typeof e.venue === "object") {
-    const claimedId = e.venue.venue_id;
-    const match = ctx.venues.resolve(e.venue);
+    const { venue: match, flag } = ctx.venues.resolveWithCheck(e.venue);
+    if (flag) review.add("venue.venue_id");
     if (match) {
       e.venue = {
         venue_id: match.venue_id,
@@ -82,7 +82,6 @@ export function normaliseEvent(raw: Raw, doc: DocumentInfo, ctx: NormaliseContex
         lng: match.lng ?? e.venue.lng ?? null,
       };
     } else {
-      if (claimedId) review.add("venue.venue_id");
       e.venue.venue_id = null;
     }
   }

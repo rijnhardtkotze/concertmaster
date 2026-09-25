@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { PATHS } from "../lib/config.ts";
 import { readJson, writeJson } from "../lib/json.ts";
 import { errorMessage, logger } from "../lib/log.ts";
@@ -10,6 +11,8 @@ import { now } from "../lib/time.ts";
 const log = logger("merge");
 
 async function main() {
+  // A missing input would read as "no events at all" and mark everything unconfirmed.
+  if (!fs.existsSync(PATHS.deduped)) throw new Error(`${PATHS.deduped} is missing; run normalise and dedupe first`);
   const { published, queue, counts } = merge({
     incoming: readJson<Event[]>(PATHS.deduped, []),
     published: readJson<Event[]>(PATHS.events, []),

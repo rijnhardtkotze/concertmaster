@@ -82,6 +82,14 @@ describe("prompt", () => {
 });
 
 describe("review issue", () => {
+  it("re-renders unrecorded ticks so rewriting the issue never loses a decision", () => {
+    const e = event({ confidence: 0.5 });
+    const body = renderReviewIssue([e], [], null, new Map([[e.id, "reject" as const]]));
+    expect(body).toContain(`- [x] reject \`${e.id}\``);
+    expect(body).toContain(`- [ ] approve \`${e.id}\``);
+    expect(parseDecisions(body).get(e.id)).toBe("reject");
+  });
+
   it("round-trips ticked decisions; reject wins over approve", () => {
     const e = event({ confidence: 0.5, needs_review: ["start"] });
     const body = renderReviewIssue([e], [], null);
@@ -229,5 +237,43 @@ describe("extraction retries", async () => {
     expect(f.status).toBe("error");
     expect(f.events).toEqual([]);
     expect(planExtraction({ ...good, retry: undefined }, "OLD").action).toBe("current");
+  });
+});
+
+describe("more review fixes", async () => {
+  const { htmlAdapter } = await import("../src/adapters/html.ts");
+  const { splitArtscape } = await import("../sources/artscape.ts");
+  it("follows nextPage until it returns null, fetching each page once", async () => {
+    const fetched: string[] = [];
+    const page = (n: number, next: string | null) =>
+      JSON.stringify({ next_rest_url: next, events: [{ title: `Opera ${n}`, url: `https://ex.org/e${n}/`, description: "", start_date: "2026-12-01 19:00:00", end_date: "2026-12-01 21:00:00", all_day: false, cost: "", website: "", categories: [{ name: "Opera", slug: "opera" }], venue: [], organizer: [] }] });
+    const bodies: Record<string, string> = { "https://ex.org/api?page=1": page(1, "https://ex.org/api?page=2"), "https://ex.org/api?page=2": page(2, null) };
+    const ctx = {
+      client: null as never,
+      manifest: {},
+      warn: () => {},
+      keepPrevious: () => false,
+      getBody: async (u: string) => {
+        fetched.push(u);
+        return { body: Buffer.from(bodies[u]!), contentType: "application/json", finalUrl: u, etag: null, lastModified: null, notModified: false };
+      },
+    };
+    const source = {
+      slug: "a", name: "a", role: "venue" as const, homepage: "https://ex.org/",
+      adapter: { type: "html" as const, startUrls: ["https://ex.org/api?page=1"], split: splitArtscape, nextPage: (b: string) => (JSON.parse(b) as { next_rest_url: string | null }).next_rest_url },
+    };
+    const docs = await htmlAdapter(source, ctx);
+    expect(docs.map((d) => d.url)).toEqual(["https://ex.org/e1/", "https://ex.org/e2/"]);
+    expect(fetched).toEqual(["https://ex.org/api?page=1", "https://ex.org/api?page=2"]);
+  });
+
+  it("parses CPO calendar starts with seconds and still drops past entries", () => {
+    const entries = [
+      { title: "Past with seconds", description: "", start: "2025-03-01 19:30:00", end: "2025-03-01 22:00:01" },
+      { title: "Future with seconds", description: "", start: "2026-11-12 19:30:00", end: "2026-11-12 22:00:01" },
+      { title: "All day", description: "", start: "2026-12-01", end: "2026-12-02", allDay: "yes" },
+    ];
+    const html = `<div data-events="${JSON.stringify(entries).replace(/"/g, "&quot;")}"></div>`;
+    expect(splitCpoCalendar(html, "https://cpo.org.za/concerts/").map((i) => i.text.split("\n")[1])).toEqual(["Title: Future with seconds", "Title: All day"]);
   });
 });
