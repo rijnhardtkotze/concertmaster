@@ -1,0 +1,27 @@
+[
+  {
+    "title": "Echoes of Vienna",
+    "series": "Summer Symphonies at the City Hall",
+    "start": "2026-11-12T19:30:00+02:00",
+    "venue": {
+      "venue_id": "cape-town-city-hall",
+      "name": "Cape Town City Hall",
+      "city": "Cape Town",
+      "province": "Western Cape"
+    },
+    "presenter": "Cape Town Philharmonic Orchestra",
+    "performers": [
+      { "name": "Arjan Tien", "role": "conductor" },
+      { "name": "François du Toit", "role": "soloist", "instrument": "piano" }
+    ],
+    "programme": [
+      { "composer": "Wolfgang Amadeus Mozart", "work": "Overture to Die Entführung aus dem Serail" },
+      { "composer": "Wolfgang Amadeus Mozart", "work": "Piano Concerto No. 24" },
+      { "composer": "Johann Strauss II", "work": "Die Fledermaus Overture" },
+      { "composer": "Richard Strauss", "work": "Der Rosenkavalier Suite" }
+    ],
+    "sa_content": { "sa_composers": [], "has_sa_work": false },
+    "genre_tags": ["orchestral"],
+    "status": "scheduled"
+  }
+]

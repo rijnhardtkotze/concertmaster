@@ -1,0 +1,10 @@
+node_modules/
+# Third-party source documents. Never committed, in any form: we have no right
+# to redistribute or relicense them. Only derived records live in data/.
+data/raw/
+# Per-run scratch output shared between stages.
+.work/
+tests/golden/results/latest.json
+*.log
+.env
+.env.*

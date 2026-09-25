@@ -1,0 +1,27 @@
+# Dependency update PRs, batched monthly to keep upkeep low.
+# Actions are pinned to commit SHAs in the workflows; Dependabot bumps the SHA and
+# the version comment together. Its PRs run the `check` job but not `golden`
+# (that job only runs for the owner's PRs, as it gets the extraction token).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      # Minor and patch updates in one PR; majors each get their own.
+      minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "chore(deps)"

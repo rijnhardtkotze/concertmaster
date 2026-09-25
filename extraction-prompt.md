@@ -35,6 +35,10 @@ A run across several dates produces one event object per date. A festival with a
 
 Reject and omit any event whose start date is more than 24 months after the fetch date, or more than 7 days before it.
 
+## Title and series
+
+title is the name of this particular concert. Listings often give both a recurring series or season name and a concert-specific name, e.g. a calendar entry titled "Summer Symphonies at the City Hall" whose details open with "ECHOES OF VIENNA". The concert-specific name is the title, the series name goes in series, and subtitle stays null unless there is a genuine third line. Use the series name as the title only when the page gives no concert-specific name.
+
 ## Language
 
 Sources appear in English and Afrikaans, occasionally isiXhosa or isiZulu. Extract from all of them. Emit field values in the source language for titles and work names; do not translate. Common Afrikaans terms: konsert (concert), kerk (church), kaartjies (tickets), aanvang (start time), toegang (entry/admission), gratis (free), orrel (organ), koor (choir), saal (hall), Vrydag/Saterdag/Sondag (Friday/Saturday/Sunday).

@@ -1,0 +1,52 @@
+[
+  {
+    "title": "Heritage Day Symphonic Jazz",
+    "description": "(present)",
+    "start": "2026-09-24T19:00:00+02:00",
+    "venue": {
+      "venue_id": "linder-auditorium",
+      "name": "Linder Auditorium",
+      "city": "Johannesburg",
+      "province": "Gauteng"
+    },
+    "presenter": "Johannesburg Philharmonic Orchestra",
+    "series": "JPO Symphonic Jazz",
+    "performers": [
+      {
+        "name": "Daniel Boico",
+        "role": "conductor"
+      },
+      {
+        "name": "Victor Masondo",
+        "role": "soloist"
+      },
+      {
+        "name": "Lindi Ngonelo",
+        "role": "soloist"
+      },
+      {
+        "name": "Johannesburg Philharmonic Orchestra",
+        "role": "orchestra"
+      }
+    ],
+    "programme": [
+      {
+        "composer": "Duke Ellington",
+        "work": "Nutcracker Suite"
+      }
+    ],
+    "sa_content": {
+      "sa_composers": [],
+      "has_sa_work": false
+    },
+    "genre_tags": [
+      "orchestral",
+      "crossover"
+    ],
+    "tickets": {
+      "url": "https://www.quicket.co.za/events/392145-the-jpo-symphonic-jazz-concert-2026/",
+      "vendor": "quicket"
+    },
+    "status": "scheduled"
+  }
+]

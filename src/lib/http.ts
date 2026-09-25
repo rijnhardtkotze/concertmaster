@@ -1,0 +1,191 @@
+import robotsParserModule from "robots-parser";
+import { BOT_TOKEN, FETCH, USER_AGENT } from "./config.ts";
+import { redact } from "./log.ts";
+import { isPublicHost } from "./url.ts";
+
+export class RobotsDisallowed extends Error {}
+export class HttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+interface Robots {
+  isAllowed(url: string, ua?: string): boolean | undefined;
+  getCrawlDelay(ua?: string): number | undefined;
+}
+// robots-parser is CommonJS with ESM-style typings; NodeNext sees the namespace, not the function.
+const robotsParser = robotsParserModule as unknown as (url: string, contents: string) => Robots;
+
+export interface HttpResponse {
+  status: number;
+  url: string;
+  headers: Headers;
+  body: Buffer;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Polite HTTP: one request per `minIntervalMs` per host (or the site's
+ * Crawl-delay if longer), robots.txt checked before every request and
+ * failing closed, descriptive User-Agent, hard timeout and size cap.
+ */
+export class PoliteClient {
+  private nextSlot = new Map<string, number>();
+  private robots = new Map<string, Promise<Robots | { unreachable: string }>>();
+
+  constructor(
+    private readonly minIntervalMs = FETCH.minIntervalMs,
+    private readonly maxBytes = FETCH.maxBytes,
+    /** Tests only: allow localhost servers. The crawler never talks to private addresses. */
+    private readonly allowPrivateHosts = false,
+  ) {}
+
+  private async throttle(host: string, delayMs: number) {
+    const now = Date.now();
+    const slot = Math.max(now, this.nextSlot.get(host) ?? 0);
+    this.nextSlot.set(host, slot + delayMs);
+    if (slot > now) await sleep(slot - now);
+  }
+
+  private loadRobots(origin: string): Promise<Robots | { unreachable: string }> {
+    let p = this.robots.get(origin);
+    if (!p) {
+      p = (async () => {
+        const url = `${origin}/robots.txt`;
+        let why = "";
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const res = await this.fetchRobotsFile(url);
+            // RFC 9309: 4xx means no restrictions. We make 401/403 an exception and
+            // fail closed, because a site blocking robots.txt is telling us something.
+            if (res.status === 401 || res.status === 403) return { unreachable: `HTTP ${res.status}` };
+            if (res.status >= 400 && res.status < 500) return robotsParser(url, "");
+            if (res.status < 300) return robotsParser(url, res.body.toString("utf8"));
+            why = `HTTP ${res.status}`;
+          } catch (err) {
+            why = err instanceof Error ? `${err.message}${err.cause instanceof Error ? ` (${err.cause.message})` : ""}` : String(err);
+          }
+          if (attempt === 0) await sleep(5000);
+        }
+        return { unreachable: why };
+      })();
+      this.robots.set(origin, p);
+    }
+    return p;
+  }
+
+  /**
+   * robots.txt itself, following redirects by hand: each hop must be a public host (unless
+   * this client allows private ones, as in tests) and is throttled by its own host.
+   * robots.txt isn't checked against robots.txt.
+   */
+  private async fetchRobotsFile(url: string): Promise<HttpResponse> {
+    let current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      const { hostname } = new URL(current);
+      if (!this.allowPrivateHosts && !isPublicHost(hostname)) throw new HttpError(`refusing to fetch non-public host ${hostname}`, 403);
+      const res = await this.raw(current, {}, this.minIntervalMs, "manual");
+      const location = res.headers.get("location");
+      if (![301, 302, 303, 307, 308].includes(res.status) || !location) return { ...res, url: current };
+      current = new URL(location, current).toString();
+    }
+    throw new HttpError(`too many redirects fetching ${redact(url)}`, 310);
+  }
+
+  /** Throws RobotsDisallowed if robots.txt forbids the URL or can't be read. */
+  async checkRobots(url: string): Promise<number> {
+    const { origin, hostname } = new URL(url);
+    // Checked here because every request, including each redirect hop, passes through.
+    if (!this.allowPrivateHosts && !isPublicHost(hostname)) throw new HttpError(`refusing to fetch non-public host ${hostname}`, 403);
+    const robots = await this.loadRobots(origin);
+    if ("unreachable" in robots) throw new RobotsDisallowed(`robots.txt for ${origin} unreachable (${robots.unreachable}); failing closed`);
+    if (robots.isAllowed(url, BOT_TOKEN) === false) throw new RobotsDisallowed(`robots.txt disallows ${redact(url)} for ${BOT_TOKEN}`);
+    const crawlDelay = robots.getCrawlDelay(BOT_TOKEN);
+    return Math.max(this.minIntervalMs, crawlDelay ? crawlDelay * 1000 : 0);
+  }
+
+  private async raw(url: string, headers: Record<string, string>, delayMs: number, redirect: "follow" | "manual" = "follow"): Promise<HttpResponse> {
+    const host = new URL(url).host;
+    await this.throttle(host, delayMs);
+    const res = await fetch(url, {
+      headers: { "user-agent": USER_AGENT, accept: "text/html,application/xhtml+xml,application/json,application/pdf;q=0.9,*/*;q=0.5", ...headers },
+      redirect,
+      signal: AbortSignal.timeout(FETCH.timeoutMs),
+    });
+    const len = Number(res.headers.get("content-length") ?? 0);
+    if (len > this.maxBytes) {
+      await res.body?.cancel();
+      throw new HttpError(`response too large (${len} bytes) from ${redact(url)}`, res.status);
+    }
+    // Content-Length can be missing or wrong, so count while streaming and stop at the cap
+    // rather than buffering an unbounded body into memory first.
+    const chunks: Buffer[] = [];
+    let size = 0;
+    if (res.body) {
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > this.maxBytes) {
+          await reader.cancel();
+          throw new HttpError(`response too large (over ${this.maxBytes} bytes) from ${redact(url)}`, res.status);
+        }
+        chunks.push(Buffer.from(value));
+      }
+    }
+    return { status: res.status, url: res.url || url, headers: res.headers, body: Buffer.concat(chunks) };
+  }
+
+  /**
+   * One request, following redirects by hand so that every hop, including a hop to another
+   * origin (a migrated site, a CDN, a ticketing domain), is checked against that origin's
+   * robots.txt and throttled by its own host's rate limit.
+   */
+  private async fetchChecked(url: string, headers: Record<string, string>): Promise<HttpResponse> {
+    let current = url;
+    for (let hop = 0; hop <= 5; hop++) {
+      const delay = await this.checkRobots(current);
+      const res = await this.raw(current, headers, delay, "manual");
+      const location = res.headers.get("location");
+      if (![301, 302, 303, 307, 308].includes(res.status) || !location) return { ...res, url: current };
+      current = new URL(location, current).toString();
+    }
+    throw new HttpError(`too many redirects from ${redact(url)}`, 310);
+  }
+
+  /**
+   * GET with robots check (on every redirect hop), conditional headers and one retry on
+   * network error or 5xx. Returns 304 responses as-is; throws on other non-2xx.
+   */
+  async get(url: string, conditional: { etag?: string | null; lastModified?: string | null } = {}): Promise<HttpResponse> {
+    await this.checkRobots(url); // fail fast, before any request, if the start URL itself is off limits
+    const headers: Record<string, string> = {};
+    if (conditional.etag) headers["if-none-match"] = conditional.etag;
+    if (conditional.lastModified) headers["if-modified-since"] = conditional.lastModified;
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await this.fetchChecked(url, headers);
+        if (res.status === 304 || (res.status >= 200 && res.status < 300)) return res;
+        if (res.status >= 500 || res.status === 429) {
+          lastErr = new HttpError(`HTTP ${res.status} from ${redact(url)}`, res.status);
+          await sleep(5000);
+          continue;
+        }
+        throw new HttpError(`HTTP ${res.status} from ${redact(url)}`, res.status);
+      } catch (err) {
+        if (err instanceof RobotsDisallowed) throw err;
+        if (err instanceof HttpError && err.status < 500 && err.status !== 429) throw err;
+        lastErr = err;
+        if (attempt === 0) await sleep(5000);
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  }
+}

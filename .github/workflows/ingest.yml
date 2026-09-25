@@ -1,0 +1,145 @@
+name: ingest
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # 03:00 SAST
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Run one source only (its slug, e.g. jpo). Leave empty for all."
+        required: false
+        default: ""
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  ingest:
+    # Pinned rather than ubuntu-latest: an unattended job shouldn't change OS under us
+    # (ubuntu-latest moves to 26.04 from 19 Oct 2026). Bump deliberately.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      INGEST_SOURCE: ${{ inputs.source }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Third-party pages, kept only as a cache so conditional GETs and the
+      # copyright guard have something to work with. Never committed.
+      - name: Restore raw document cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw
+          key: raw-${{ hashFiles('data/manifest.json') }}
+          restore-keys: raw-
+
+      # Each stage fails soft per source; a non-zero exit here means something
+      # systemic (bad API key, no credit, a code bug). Later stages still run on
+      # whatever state exists, so one broken stage never loses the others' work.
+      - name: Fetch
+        id: fetch
+        run: pnpm run fetch
+        env:
+          QUICKET_API_KEY: ${{ secrets.QUICKET_API_KEY }}
+
+      - name: Save raw document cache
+        if: ${{ !cancelled() }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw
+          key: raw-${{ hashFiles('data/manifest.json') }}
+
+      # Billed to your Claude subscription via headless Claude Code when
+      # CLAUDE_CODE_OAUTH_TOKEN is set (from `claude setup-token`); falls back
+      # to per-token API billing with ANTHROPIC_API_KEY. Set one of the two.
+      - name: Extract
+        id: extract
+        if: ${{ !cancelled() }}
+        run: pnpm run extract
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      # Normalise works from the committed extractions, so it runs even if fetch or
+      # extract failed. Everything after it needs its predecessor's output: a missing
+      # .work file must never reach merge (it would read as "every event vanished").
+      - name: Normalise
+        id: normalise
+        if: ${{ !cancelled() }}
+        run: pnpm run normalise
+
+      - name: Dedupe
+        id: dedupe
+        if: ${{ !cancelled() && steps.normalise.outcome == 'success' }}
+        run: pnpm run dedupe
+
+      - name: Read review decisions from the issue
+        if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
+        run: pnpm run review-sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Runs even if extraction stopped early (expired token, usage limit): a document that
+      # wasn't reached keeps its last extraction, so its events stay as they were. Only a page
+      # fetch confirmed gone, or one re-extracted without the event, makes an event vanish.
+      # Whatever did get extracted is committed, so a daily usage limit can't stall progress.
+      - name: Merge
+        id: merge
+        if: ${{ !cancelled() && steps.dedupe.outcome == 'success' }}
+        run: pnpm run merge
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: pnpm run report
+
+      - name: Check for leaked secrets
+        id: secrets
+        if: ${{ !cancelled() }}
+        run: node scripts/check-secrets.mjs --all
+
+      # Only commit a complete run. If merge didn't succeed, nothing is committed and the
+      # run is red; the next run starts again from the last good state.
+      - name: Commit data
+        id: commit
+        if: ${{ !cancelled() && steps.merge.outcome == 'success' && steps.secrets.outcome == 'success' }}
+        run: |
+          git add data/
+          # Timestamps that move on every run don't count as a change.
+          if git diff --cached --quiet -I'"(last_fetched|last_attempt|last_success)":'; then
+            echo "No meaningful data change; skipping commit."
+            git reset -q
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -F .work/commit-message.txt
+          for i in 1 2 3; do
+            git push && exit 0
+            git pull --rebase -q && continue
+            echo "rebase failed"; exit 1
+          done
+          exit 1
+
+      # Runs even after a failure so source-failure issues still get opened. The review issue
+      # is only rewritten if the data commit went through; otherwise it's left untouched, so
+      # no reviewer tick is lost with the unsaved decisions.
+      - name: Update issues
+        if: ${{ !cancelled() }}
+        run: pnpm run notify
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DATA_COMMITTED: ${{ steps.commit.outcome == 'success' }}
