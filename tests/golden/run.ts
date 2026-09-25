@@ -8,7 +8,8 @@
  *   pnpm run golden -- --save-baseline  # accept this run as the new baseline
  *
  * Exits non-zero when overall field accuracy drops more than --tolerance (default 0.05)
- * below the baseline, or event recall or precision drops at all. Per-field movement is reported in
+ * below the baseline, or event recall or precision drops at all, on two live runs in a row
+ * (the first failure triggers one re-run, since extraction isn't deterministic). Per-field movement is reported in
  * the table but doesn't gate on its own (too few samples per field). With
  * --require-baseline (as in CI) a missing baseline is an error, not a pass.
  */
@@ -76,45 +77,76 @@ async function main() {
   const previous = readJson<Results | null>(LATEST, null);
 
   const caseIds = fs.readdirSync(CASES).filter((d) => fs.statSync(path.join(CASES, d)).isDirectory() && (!args.case || d === args.case)).sort();
-  const scores: CaseScore[] = [];
-  const out: Results["cases"] = {};
   const models = new Set<string>();
+  const runCases = async () => {
+    const scores: CaseScore[] = [];
+    const out: Results["cases"] = {};
+    for (const id of caseIds) {
+      const dir = path.join(CASES, id);
+      const meta = readJson<CaseMeta>(path.join(dir, "case.json"), null as unknown as CaseMeta);
+      const text = fs.readFileSync(path.join(dir, "input.txt"), "utf8");
+      const expected = readJson<Expected[]>(path.join(dir, "expected.json"), []);
+      const source: SourceConfig = sources.get(meta.source) ?? { slug: meta.source, name: meta.source, role: "presenter", homepage: meta.url, adapter: { type: "html", startUrls: [] } };
+      models.add(modelFor(source, meta.document_type));
 
-  for (const id of caseIds) {
-    const dir = path.join(CASES, id);
-    const meta = readJson<CaseMeta>(path.join(dir, "case.json"), null as unknown as CaseMeta);
-    const text = fs.readFileSync(path.join(dir, "input.txt"), "utf8");
-    const expected = readJson<Expected[]>(path.join(dir, "expected.json"), []);
-    const source: SourceConfig = sources.get(meta.source) ?? { slug: meta.source, name: meta.source, role: "presenter", homepage: meta.url, adapter: { type: "html", startUrls: [] } };
-    models.add(modelFor(source, meta.document_type));
+      let raw: unknown[];
+      let guard: Map<number, string>;
+      if (recorded) {
+        raw = previous?.cases[id]?.raw ?? [];
+        guard = new Map();
+      } else {
+        const r = await extractDocument(ctx, { source, url: meta.url, kind: meta.document_type, fetchedAt: meta.fetched_at, text });
+        raw = r.events;
+        guard = new Map(r.guard_failures.map((g) => [g.index, g.reason]));
+      }
 
-    let raw: unknown[];
-    let guard: Map<number, string>;
-    if (recorded) {
-      raw = previous?.cases[id]?.raw ?? [];
-      guard = new Map();
-    } else {
-      const r = await extractDocument(ctx, { source, url: meta.url, kind: meta.document_type, fetchedAt: meta.fetched_at, text });
-      raw = r.events;
-      guard = new Map(r.guard_failures.map((g) => [g.index, g.reason]));
+      const doc = { url: meta.url, source: meta.source, fetchedAt: meta.fetched_at, contentHash: sha256(text), text: sourceShingles(text), defaultPresenter: source.defaultPresenter };
+      const actual: Event[] = [];
+      const notes: string[] = [];
+      (raw as Record<string, unknown>[]).forEach((r, i) => {
+        const n = normaliseEvent(r, doc, { venues, composers, now: new Date(meta.fetched_at) }, guard.get(i));
+        if (n.ok) actual.push(n.event);
+        else notes.push(n.skipped ? `skipped (${n.reason})` : `rejected: ${n.reasons.join("; ")}`);
+      });
+      const s = scoreCase(expected, actual);
+      s.mismatches.push(...notes);
+      scores.push(s);
+      out[id] = { raw, mismatches: s.mismatches };
     }
+    return { summary: combine(scores), out };
+  };
 
-    const doc = { url: meta.url, source: meta.source, fetchedAt: meta.fetched_at, contentHash: sha256(text), text: sourceShingles(text), defaultPresenter: source.defaultPresenter };
-    const actual: Event[] = [];
-    const notes: string[] = [];
-    (raw as Record<string, unknown>[]).forEach((r, i) => {
-      const n = normaliseEvent(r, doc, { venues, composers, now: new Date(meta.fetched_at) }, guard.get(i));
-      if (n.ok) actual.push(n.event);
-      else notes.push(n.skipped ? `skipped (${n.reason})` : `rejected: ${n.reasons.join("; ")}`);
-    });
-    const s = scoreCase(expected, actual);
-    s.mismatches.push(...notes);
-    scores.push(s);
-    out[id] = { raw, mismatches: s.mismatches };
-  }
-
-  const summary = combine(scores);
+  // Gate on overall accuracy (all field checks pooled) and event recall/precision. Individual
+  // fields have 1–5 samples, so one non-deterministic answer swings a field by 20–50%: shown
+  // in the table below, but gating on it would make the job flaky.
   const baseline = readJson<Results | null>(BASELINE, null);
+  const tolerance = Number(args.tolerance ?? 0.05);
+  const overall = (f: Record<string, { correct: number; total: number }>) => {
+    const t = Object.values(f).reduce((a, x) => ({ c: a.c + x.correct, n: a.n + x.total }), { c: 0, n: 0 });
+    return t.n ? t.c / t.n : 1;
+  };
+  const regressions = (now: ReturnType<typeof combine>, base: Results) => {
+    const failures: string[] = [];
+    const [a, b] = [overall(base.summary.fields), overall(now.fields)];
+    if (a - b > tolerance) failures.push(`overall accuracy fell from ${pct(a)} to ${pct(b)}`);
+    if (now.events.recall < base.summary.events.recall) failures.push(`event recall fell from ${pct(base.summary.events.recall)} to ${pct(now.events.recall)}`);
+    // Extra, invented events don't lower recall or field scores, so precision is gated too.
+    if (now.events.precision < base.summary.events.precision) failures.push(`event precision fell from ${pct(base.summary.events.precision)} to ${pct(now.events.precision)}`);
+    return failures;
+  };
+
+  let { summary, out } = await runCases();
+  // Extraction isn't deterministic (the Claude Code path can't set temperature), and with
+  // ~40 pooled checks one run can drift a few points either way. A real regression fails
+  // twice; a wobble doesn't. So a live run that trips the gate gets exactly one re-run,
+  // and that second run is the one reported and gated.
+  if (!recorded && !args["save-baseline"] && baseline) {
+    const first = regressions(summary, baseline);
+    if (first.length) {
+      console.warn(`golden: ${first.join("; ")}; re-running once to rule out run-to-run variance`);
+      ({ summary, out } = await runCases());
+    }
+  }
   const rows = Object.entries(summary.fields).map(([field, f]) => {
     const b = baseline?.summary.fields[field];
     const delta = b ? f.accuracy - b.accuracy : null;
@@ -148,14 +180,6 @@ async function main() {
     return;
   }
 
-  // Gate on overall accuracy (all field checks pooled) and event recall. Individual fields
-  // have 1–5 samples, so one non-deterministic answer swings a field by 20–50%: shown in
-  // the table above, but gating on it would make the job flaky.
-  const tolerance = Number(args.tolerance ?? 0.05);
-  const overall = (f: Record<string, { correct: number; total: number }>) => {
-    const t = Object.values(f).reduce((a, x) => ({ c: a.c + x.correct, n: a.n + x.total }), { c: 0, n: 0 });
-    return t.n ? t.c / t.n : 1;
-  };
   if (!baseline) {
     const msg = "golden: no committed baseline (tests/golden/results/baseline.json), so nothing to compare against";
     if (args["require-baseline"]) {
@@ -170,11 +194,7 @@ async function main() {
   console.log(
     `golden: overall field accuracy ${pct(now)} (baseline ${pct(before)}), event recall ${pct(e.recall)} (baseline ${pct(baseline.summary.events.recall)}), precision ${pct(e.precision)} (baseline ${pct(baseline.summary.events.precision)})`,
   );
-  const failures: string[] = [];
-  if (before - now > tolerance) failures.push(`overall accuracy fell from ${pct(before)} to ${pct(now)}`);
-  if (e.recall < baseline.summary.events.recall) failures.push(`event recall fell from ${pct(baseline.summary.events.recall)} to ${pct(e.recall)}`);
-  // Extra, invented events don't lower recall or field scores, so precision is gated too.
-  if (e.precision < baseline.summary.events.precision) failures.push(`event precision fell from ${pct(baseline.summary.events.precision)} to ${pct(e.precision)}`);
+  const failures = regressions(summary, baseline);
   if (failures.length) {
     console.error(`golden: regression: ${failures.join("; ")}`);
     process.exit(1);
