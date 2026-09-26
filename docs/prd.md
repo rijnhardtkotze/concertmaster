@@ -62,7 +62,7 @@ Nothing is public yet. The rebuild is the first thing people will see.
 
 The schema covers Production, Performance, Series, Season, Presenter, Ensemble, Person, Credit, Work, Programme, Venue, Source, Fetch record, Extraction, Field lineage and Review decision, as defined in `CONTEXT.md`.
 
-- [ ] All tables are created by SQL migrations in `supabase/migrations/` (ADR 0012).
+- [ ] All tables are created by SQL migrations in `supabase/migrations/` (ADR 0015).
 - [ ] CI runs the migrations against a local Supabase stack with the tests. A merge to `v2` applies them to the production project `egturlxzxgyaugiyybqe`.
 - [ ] Row-level security is on for every table. The anon role can `select` only from the published views (ADR 0004).
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
@@ -77,7 +77,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 
 #### 2. Ingestion into Postgres
 
-The existing stages keep their shape: fetch, extract, normalise, dedupe, review-sync, merge, report, notify. They run on GitHub Actions and read and write Postgres (ADR 0002).
+The existing stages keep their shape: fetch, extract, normalise, dedupe, review-sync, merge, report, notify. They run on GitHub Actions and read and write Postgres (ADR 0014).
 
 - [ ] Fetch writes a Fetch record per document with URL, content hash, time, HTTP status and robots decision. It writes no body (ADR 0003).
 - [ ] Raw bodies exist only in the Actions cache during a run. A document whose hash has not changed skips extraction.
