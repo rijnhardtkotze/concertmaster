@@ -1,50 +1,62 @@
 # AGENTS.md
 
-Instructions for coding agents (Claude Code, Codex, Cursor and others) working in this repository. Humans are welcome to read along.
+These are the rules for coding agents in this repository. Claude Code reads them through `CLAUDE.md`.
 
-SA Classical Guide is a site of classical music listings and editorial for South Africa. This repo holds the ingestion pipeline and, later, the Astro site. It has to run on less than two hours a week of the owner's time, so automation comes first: any change that adds manual work needs a strong reason.
+SA Classical Guide lists classical concerts in South Africa and publishes editorial about them. This repo holds the ingestion pipeline. The Astro site comes later.
 
-## Read before you start
+The site has to run on less than two hours of my time a week. Any change that adds manual work needs a strong reason.
 
-- **`CONTEXT.md`** is the glossary. Use its terms exactly (Production, Performance, Presenter, Ensemble, Work and so on) in code, tests, commits and prose. Never use a term from its _Avoid_ lists. In particular, don't use "event" as a record type.
-- **`docs/adr/`** holds the architecture decisions that are already settled. Don't reopen them in passing. If your work needs to go against one, stop and say so; don't work around it. A new decision that is hard to reverse, would surprise a future reader, and came from a real trade-off gets a new ADR (the next number, same format).
+## Read these two things before you start
 
-## Branches
+1. **`CONTEXT.md` is the glossary.** Use its terms exactly in code, tests, commits and prose. Never use a word from an _Avoid_ list. One dated sitting is a Performance. A run of them is a Production.
+2. **`docs/adr/` holds the settled decisions.** Do not reopen them in passing. If your work conflicts with one, stop and say so. Write a new ADR when a decision is hard to reverse, would surprise a later reader, and came from a real trade-off. Use the next number and the same format.
 
-- **`v2`** is the Supabase rebuild. All rebuild work goes in pull requests that target `v2`.
-- **`main`** is the old file-based pipeline. It is frozen: only urgent fixes go there, and nightly ingest is paused.
-- **Don't sync `main` into `v2`.** v2 is a rewrite. If a fix on `main` matters for v2, re-implement it in the new code rather than merging it across.
-- **Cutover** happens once, at the end: `git merge -s ours origin/main` on `v2`, then fast-forward `main` to `v2`. Never force-push either branch.
+## How the branches work
 
-## Commits
+`v2` is the Supabase rebuild. `main` is the old file-based pipeline, and it is frozen.
 
-- **One change, one commit.** Each commit does exactly one thing and says what it is: a refactor, a feature, a test fix, a doc update. Don't bundle unrelated edits, even small ones. A formatting pass is its own commit.
-- Every commit leaves the tree green: `pnpm run typecheck && pnpm run lint && pnpm run test`.
-- Subject line in the imperative, prefixed with the area, e.g. `ingest: stop extract after a time budget`, `docs(adr): 0013 …`, `chore(deps): …`, `schema: add performance table`.
-- Commit on a branch, never directly to `main` or `v2`.
+1. Open every rebuild pull request against `v2`.
+2. Leave `main` alone. Only urgent fixes go there. Nightly ingest is paused.
+3. Do not merge `main` into `v2`. v2 is a rewrite. If v2 needs a fix from `main`, re-implement it in the new code.
+4. Cut over once, at the end. Run `git merge -s ours origin/main` on `v2`, then fast-forward `main` to `v2`.
+5. Never force-push `main` or `v2`.
 
-## Commands
+## How to commit
+
+One change, one commit.
+
+1. Each commit does one thing: a refactor, a feature, a test fix or a doc edit. A formatting pass is its own commit.
+2. Every commit passes `pnpm run typecheck && pnpm run lint && pnpm run test`.
+3. Write the subject in the imperative, prefixed with the area. For example `ingest: stop extract after a time budget` or `schema: add performance table`.
+4. Commit on a branch. Never commit straight to `main` or `v2`.
+
+## Which commands to run
+
+Node 22. The pnpm version is pinned in `package.json`.
 
 ```sh
-corepack enable && pnpm install      # Node 22, pnpm version pinned in package.json
+corepack enable && pnpm install
 pnpm run typecheck
 pnpm run lint
 pnpm run test
 pnpm run check-secrets
-pnpm run golden                      # live extraction regression; costs model calls, run only when the prompt or extraction changes
+pnpm run golden
 ```
 
-## Rules that don't bend
+`pnpm run golden` costs model calls. Run it only when the prompt or the extraction code changes.
 
-- **No third-party content at rest (ADR 0003).** Source HTML and PDF bodies are never committed, and never written to Postgres or any other store we own. `data/raw/` stays gitignored. The copyright guard runs in the extract stage, before anything is persisted.
-- **Never commit secrets.** The pre-commit hook and CI both block anything shaped like an Anthropic key. Credentials come from environment variables (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, `QUICKET_API_KEY`, and the Supabase keys).
-- **Model parameters.** Sonnet 5 and Opus 5 take `effort`, not `temperature`. Haiku 4.5 is the determinism comparison and still accepts `temperature: 0`.
-- **Time.** All times are South African Standard Time, written with an explicit `+02:00` offset. There's no DST.
-- **Copy.** All site copy is localised South African English. No Afrikaans or other-language titles.
+## The rules that never bend
 
-## Supabase
+- **No third-party content at rest** (ADR 0003). Source HTML and PDF bodies never go into git, Postgres or any other store we own. `data/raw/` stays gitignored. The copyright guard runs in the extract stage, before anything is saved.
+- **No secrets in commits.** The pre-commit hook and CI block anything shaped like an Anthropic key. Credentials come from environment variables: `CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, `QUICKET_API_KEY` and the Supabase keys.
+- **Model parameters.** Sonnet 5 and Opus 5 take `effort` and reject `temperature`. Haiku 4.5 is the determinism comparison and still takes `temperature: 0`.
+- **Times.** Every time is South African Standard Time, with an explicit `+02:00` offset. There is no daylight saving.
+- **Copy.** Site copy is localised South African English only. No Afrikaans or other-language titles.
 
-- Project `Concertmaster`, ref `egturlxzxgyaugiyybqe` (eu-west-1, Postgres 17).
-- Postgres is the source of truth. In the first v2 release, Supabase is used as Postgres only: no Auth, Storage, Edge Functions or pg_cron (ADR 0001).
-- The schema changes only through SQL migrations in `supabase/migrations/`, made with the Supabase CLI and applied by CI (ADR 0012). Never change the production schema through the dashboard or an MCP connector.
-- Row-level security is enabled on every table. The anon role can only `select` from published views (ADR 0004).
+## How we use Supabase
+
+Postgres is the source of truth. The project is `Concertmaster`, ref `egturlxzxgyaugiyybqe`, on Postgres 17 in eu-west-1.
+
+1. **Postgres only, for now.** In the first v2 release we use no Auth, Storage, Edge Functions or pg_cron (ADR 0001).
+2. **Migrations are the only way to change the schema.** Write them as SQL in `supabase/migrations/` with the Supabase CLI. CI applies them (ADR 0012). Never change the production schema through the dashboard or an MCP connector.
+3. **Row-level security is on for every table.** The anon role may only `select` from published views (ADR 0004).
