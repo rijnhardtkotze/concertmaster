@@ -115,6 +115,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
 - [ ] Each Venue has a page with its Upcoming Productions.
 - [ ] Unlisted Performances do not appear anywhere on the site.
+- [ ] The site goes live on `concertmaster.co.za`, with `classicalmusic.co.za` redirecting to it. Both are Cloudflare zones.
 - [ ] The crawler page at `/about/crawler` explains the bot, its user agent and how to opt out.
 - [ ] The about page states that the listings are licensed CC BY 4.0 (ADR 0011).
 - [ ] All copy is localised South African English.
@@ -154,7 +155,6 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ## What is still open
 
-2. **The long-term domain.** `concertmaster.co.za` or `classicalmusic.co.za`. It is one line in config. Mine to decide. Does not block.
 3. **The Supabase plan.** Whether the free tier's limits and pausing rules hold for a daily write load. Engineering. Blocks go-live.
 4. **How the site looks.** No design exists yet. A design pass before the site slice. Mine, with design. Blocks the site slice.
 5. **Quicket's terms.** Whether the API terms allow republishing listings under CC BY 4.0. Legal. Blocks go-live.
