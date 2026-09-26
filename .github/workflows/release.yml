@@ -3,6 +3,8 @@ name: release
 # Run by hand from the Actions tab, on the branch being released.
 # Batches the unreleased changie fragments into a version, updates CHANGELOG.md,
 # commits and tags it, and creates a GitHub Release with that version's notes.
+# If a run tagged the version but failed to publish the Release, run it again with
+# the same explicit version: it skips straight to publishing.
 on:
   workflow_dispatch:
     inputs:
@@ -28,8 +30,18 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
+      - name: Resume a release that is already tagged
+        id: resume
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$VERSION" > /dev/null; then
+            echo "$VERSION is already tagged. Publishing its Release only."
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          fi
       - name: Batch and merge the changelog
         id: changelog
+        if: steps.resume.outputs.tagged != 'true'
         env:
           VERSION: ${{ inputs.version }}
         run: |
@@ -39,6 +51,7 @@ jobs:
           $changie merge
           echo "version=$released" >> "$GITHUB_OUTPUT"
       - name: Commit, tag and push
+        if: steps.resume.outputs.tagged != 'true'
         env:
           RELEASED: ${{ steps.changelog.outputs.version }}
         run: |
@@ -53,5 +66,12 @@ jobs:
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASED: ${{ steps.changelog.outputs.version }}
-        run: gh release create "$RELEASED" --title "$RELEASED" --notes-file ".changes/$RELEASED.md" --verify-tag
+          RELEASED: ${{ steps.changelog.outputs.version || inputs.version }}
+        run: |
+          if gh release view "$RELEASED" > /dev/null 2>&1; then
+            echo "The $RELEASED Release already exists."
+            exit 0
+          fi
+          # Read the notes from the tagged commit, so a resumed run works from any checkout.
+          git show "$RELEASED:.changes/$RELEASED.md" > release-notes.md
+          gh release create "$RELEASED" --title "$RELEASED" --notes-file release-notes.md --verify-tag
