@@ -59,7 +59,7 @@ A place Performances happen, drawn from a curated list that includes each venue'
 _Avoid_: Location, hall, space
 
 **Performance status**:
-Whether a Performance is scheduled, cancelled, postponed or sold out, as its sources state. A missing status means scheduled.
+Whether a Performance is scheduled, few left, sold out, postponed or cancelled, as its sources state. A missing status means scheduled. The site shows scheduled as "On sale". "Free" comes from its Price tiers, "Unconfirmed" from a missing detail such as the start time, and "Past" from its date. None of these three is a status.
 _Avoid_: State
 
 **Unlisted**:
