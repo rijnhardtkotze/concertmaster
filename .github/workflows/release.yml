@@ -47,7 +47,9 @@ jobs:
           git add CHANGELOG.md .changes
           git commit -m "release: $RELEASED"
           git tag -a "$RELEASED" -m "$RELEASED"
-          git push origin "HEAD:$GITHUB_REF_NAME" "refs/tags/$RELEASED"
+          # Atomic: the branch and the tag land together or not at all. If the branch moved
+          # since checkout, nothing is pushed and the run can simply be started again.
+          git push --atomic origin "HEAD:$GITHUB_REF_NAME" "refs/tags/$RELEASED"
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
