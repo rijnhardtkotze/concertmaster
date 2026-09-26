@@ -68,6 +68,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
+- [ ] Every Venue stores an address, city, province, a map location, and optional doors-open and parking notes. Unknown notes show as unconfirmed.
 - [ ] Every Performance has one or more Price tiers, each a name and an amount in rand. The diary shows the highest tier and the lowest beneath it.
 - [ ] Every Production has one Genre from the fixed list in `CONTEXT.md`. Extraction picks it, and a Production it can't place goes to review.
 - [ ] The project stays on the Supabase Free plan. The nightly Action's daily writes keep it from pausing.
@@ -120,7 +121,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 - [ ] An ingest run that changes the listings builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets (ADR 0013).
 - [ ] The home page is the diary: Upcoming Performances, one row each, grouped by month and soonest first. Each row shows date, time, title, Credits, Venue, price and status.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
-- [ ] Each Venue has a page with its Upcoming Productions.
+- [ ] Each Venue has a page with its Upcoming Performances, address, map, directions link, and doors-open and parking notes where known.
 - [ ] Unlisted Performances do not appear anywhere on the site.
 - [ ] The site goes live on `concertmaster.co.za`, with `classicalmusic.co.za` redirecting to it. Both are Cloudflare zones.
 - [ ] The crawler page at `/about/crawler` explains the bot, its user agent and how to opt out.
