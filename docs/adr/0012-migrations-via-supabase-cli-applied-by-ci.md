@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0015
 ---
 
 # Database migrations are SQL files in the repo, applied by CI
