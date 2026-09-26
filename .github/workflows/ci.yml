@@ -46,6 +46,28 @@ jobs:
           fi
           echo "Fragments added:"
           echo "$added"
+      - name: Validate every unreleased fragment
+        run: |
+          # changie rejects malformed YAML and unknown kinds. It accepts an empty body, so check that too.
+          npx --yes "changie@$(node -p "require('./package.json').devDependencies.changie")" batch v0.0.0 --dry-run > /dev/null
+          node -e '
+            const fs = require("fs");
+            const empty = [];
+            for (const f of fs.readdirSync(".changes/unreleased").filter((n) => n.endsWith(".yaml"))) {
+              const text = fs.readFileSync(`.changes/unreleased/${f}`, "utf8");
+              const m = text.match(/^body:[ \t]*(.*)$/m);
+              let body = m ? m[1].trim() : "";
+              if (/^[|>][-+]?$/.test(body)) {
+                const after = text.slice(text.indexOf(m[0]) + m[0].length).split("\n").slice(1);
+                body = (after.find((l) => /^\s+\S/.test(l)) ?? "").trim();
+              }
+              if (!body.replace(/^["\x27]+|["\x27]+$/g, "").trim()) empty.push(f);
+            }
+            if (empty.length) {
+              console.log(`::error::Give these fragments a body: ${empty.join(", ")}`);
+              process.exit(1);
+            }
+          '
 
   golden:
     # Live extraction over tests/golden/cases (two calls per case, on the subscription
