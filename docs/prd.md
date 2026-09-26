@@ -68,6 +68,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
+- [ ] Every Production has one Genre from the fixed list in `CONTEXT.md`. Extraction picks it, and a Production it can't place goes to review.
 - [ ] The project stays on the Supabase Free plan. The nightly Action's daily writes keep it from pausing.
 - [ ] The nightly Action runs `supabase db dump` and keeps the dump in a Cloudflare R2 bucket. Free has no automatic backups.
 

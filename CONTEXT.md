@@ -12,6 +12,10 @@ _Avoid_: Event, show, concert (as a record type)
 One sitting of a Production at one venue at one start time. A matinee and the evening show on the same day are two Performances.
 _Avoid_: Event, date, occurrence, sitting
 
+**Genre**:
+The kind of concert a Production is, from a fixed list: chamber, orchestral, recital, choral, vocal, contemporary or early music. The list grows only by a migration.
+_Avoid_: Category, type, style
+
 **Series**:
 A recurring named banner that Productions are billed under, such as "Summer Symphonies at the City Hall". It is not the Production's own title.
 _Avoid_: Strand, programme
