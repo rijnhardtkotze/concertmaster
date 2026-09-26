@@ -184,6 +184,15 @@ async function main() {
   ].join("\n");
   console.log(report);
   if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, report + "\n");
+  // In Actions the headline and the mismatches also go out as a notice, so the result
+  // shows among the pull request's checks without opening the job.
+  if (process.env.GITHUB_ACTIONS) {
+    const lines = [
+      `Prompt ${version}: Performance recall ${pct(e.recall)}, precision ${pct(e.precision)}, overall field accuracy ${pct(overall(summary.fields))}`,
+      ...Object.entries(out).flatMap(([id, c]) => c.mismatches.map((m) => `${id}: ${m}`)),
+    ];
+    console.log(`::notice title=Golden set::${lines.join("\n").replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A")}`);
+  }
 
   const results: Results = { prompt_version: version, models: [...models], ran_at: new Date().toISOString(), summary, cases: out };
   if (!recorded) writeJson(LATEST, results);
