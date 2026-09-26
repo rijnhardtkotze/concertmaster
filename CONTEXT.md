@@ -59,7 +59,7 @@ The ordered list of Works a Production performs, with any intervals in their pla
 _Avoid_: Setlist, repertoire
 
 **Venue**:
-A place Performances happen, drawn from a curated list that includes each venue's known alternative names. A Performance at a venue that isn't on the list waits in the Review queue until that venue is approved.
+A place Performances happen, with its known alternative names. Every Venue starts as a name a source gave and exists only once approved in the Review queue; nothing is seeded (ADR 0018). A Performance at a venue that isn't approved yet waits in the Review queue.
 _Avoid_: Location, hall, space
 
 **Performance status**:
