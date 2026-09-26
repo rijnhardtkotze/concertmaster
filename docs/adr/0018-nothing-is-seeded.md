@@ -10,7 +10,7 @@ The rebuild starts with an empty database (PRD, cutover). This goes one step fur
 
 1. **No seed from `data/venues.json` or `data/composers-sa.json`.** v2 never reads them. They go with the rest of `data/` at cutover (ADR 0011).
 2. **Every Venue starts as a Venue candidate.** The first time extraction names a place, it waits in the Review queue with the address and city the source gave. Approving it creates the Venue. "Same as <Venue>" adds the name as an alias of a Venue already approved. Rejecting it keeps its Performances off the site.
-3. **A Venue's details come from its sources.** Address, city and province come from extraction. Doors-open and parking notes show as unconfirmed until a source gives them. The map location stays empty until a source gives one, and the site's map and directions links use the address instead.
+3. **A Venue's details come from its sources.** Address, city, province, map location, and doors-open and parking notes are all nullable, and approval never waits for them. Whatever is unknown shows as unconfirmed. The site's map and directions links use the map location when there is one, then the address, then the Venue's name and city.
 4. **A Person is South African only when a source says so**, whatever their role. The model reports what the page states about a Person, such as "South African composer", and never guesses from a name. Normalise never infers it either. This replaces the spec's rule that a Composer's `locale` comes only from the curated seed.
 5. **Settings and enums are not listings data.** ADR 0017's settings and the Genre, Performance status and premiere enums are still created by migration.
 
