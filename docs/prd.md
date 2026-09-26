@@ -68,6 +68,8 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
+- [ ] The project stays on the Supabase Free plan. The nightly Action's daily writes keep it from pausing.
+- [ ] The nightly Action runs `supabase db dump` and keeps the dump in a Cloudflare R2 bucket. Free has no automatic backups.
 
 #### 2. Ingestion into Postgres
 
@@ -155,7 +157,6 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ## What is still open
 
-3. **The Supabase plan.** Whether the free tier's limits and pausing rules hold for a daily write load. Engineering. Blocks go-live.
 4. **How the site looks.** No design exists yet. A design pass before the site slice. Mine, with design. Blocks the site slice.
 5. **Quicket's terms.** Whether the API terms allow republishing listings under CC BY 4.0. Legal. Blocks go-live.
 
