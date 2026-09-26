@@ -80,7 +80,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 The existing stages keep their shape: fetch, extract, normalise, dedupe, review-sync, merge, report, notify. They run on GitHub Actions and read and write Postgres (ADR 0014).
 
 - [ ] Fetch writes a Fetch record per document with URL, content hash, time, HTTP status and robots decision. It writes no body (ADR 0003).
-- [ ] Raw bodies exist only in the Actions cache during a run. A document whose hash has not changed skips extraction.
+- [ ] Raw bodies exist only in the Actions cache during a run. A document skips extraction only when its content hash already has an Extraction under the current prompt version (ADR 0017).
 - [ ] Extract writes an Extraction only after the copyright guard passes it. The guard rejects descriptions over 400 characters and any 12-word span copied from the source.
 - [ ] Extract stops starting new documents when its time budget runs out, 30 minutes by default. The remaining documents wait for the next run.
 - [ ] Scanned PDFs with under about 100 characters of text per page are rasterised and sent as images.
