@@ -4,7 +4,7 @@ status: accepted
 
 # Postgres is the source of truth; Supabase is used as Postgres only
 
-Until now git was the database: the daily Action committed `data/` and git history held all state. For the rebuild, the Supabase project's Postgres database becomes the single source of truth for listings. Git holds code, content and exports only. For the first v2 release we use Supabase as a managed Postgres (tables, views, constraints, row-level security) and nothing else: no Auth, Storage, Edge Functions or pg_cron.
+Until now git was the database: the daily Action committed `data/` and git history held all state. For the rebuild, the Supabase project's Postgres database becomes the single source of truth for listings. Git holds code and content only (exports are deferred, see ADR 0011). For the first v2 release we use Supabase as a managed Postgres (tables, views, constraints, row-level security) and nothing else: no Auth, Storage, Edge Functions or pg_cron.
 
 ## Considered Options
 
