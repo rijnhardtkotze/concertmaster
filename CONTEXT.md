@@ -100,6 +100,10 @@ _Avoid_: Parse, scrape, raw
 For every field of a Production or Performance, the record of which Extraction supplied its current value.
 _Avoid_: Provenance (too vague), audit
 
+**Published view**:
+One of the three views the site is built from: Diary, Production and Venue. They hold only published, listed content with its display labels worked out, and merge refreshes them at the end of every run. They are the only thing the public can read (ADR 0016).
+_Avoid_: API, endpoint, export, feed
+
 **Review decision**:
 An approve or reject verdict on one Performance, ticked in the Review queue issue. It holds until that Performance's content changes at the source.
 _Avoid_: Approval, moderation
