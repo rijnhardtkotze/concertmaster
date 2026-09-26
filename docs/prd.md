@@ -69,7 +69,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
 - [ ] Every Venue stores an address, city, province, a map location, and optional doors-open and parking notes. Unknown notes show as unconfirmed.
-- [ ] Every Performance has one or more Price tiers, each a name and an amount in rand. The diary shows the highest tier and the lowest beneath it.
+- [ ] A Performance has zero or more Price tiers, each a name and an amount in rand. With none, the price is unknown and the diary shows "Price to come". With tiers, it shows the highest and the lowest beneath it.
 - [ ] A Programme is an ordered list of items. Each item is a Work or an interval with its length.
 - [ ] Every Production has one Genre from the fixed list in `CONTEXT.md`. Extraction picks it, and a Production it can't place goes to review.
 - [ ] The project stays on the Supabase Free plan. The nightly Action's daily writes keep it from pausing.
@@ -97,7 +97,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 - [ ] A Work matches on Composer, normalised title and catalogue number where given. A miss creates the Work and lists it in the Review issue as information only (ADR 0010).
 - [ ] Performances missing from all their Sources for three runs in a row become Unlisted. They are hidden, noted in the Review issue and never deleted.
 - [ ] A Performance status of few left, sold out, postponed or cancelled shows on the site as stated by the source. Scheduled shows as "On sale".
-- [ ] A Performance whose Price tiers are all zero shows as "Free". One whose start time is missing shows "Time to come" and is labelled "Unconfirmed".
+- [ ] A Performance that has Price tiers, all of them zero, shows as "Free". One whose start time is missing shows "Time to come" and is labelled "Unconfirmed".
 - [ ] A Performance with no date or no Venue never reaches the site. It waits in the Review queue.
 
 #### 4. Review and alerts

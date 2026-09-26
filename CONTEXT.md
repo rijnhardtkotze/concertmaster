@@ -71,7 +71,7 @@ A Performance that has been missing from all its sources for three runs in a row
 _Avoid_: Deleted, removed, expired
 
 **Price tier**:
-One named ticket price for a Performance, in rand, such as "Adults R225" or "Pensioners and students R200". A Performance has one or more.
+One named ticket price for a Performance, in rand, such as "Adults R225" or "Pensioners and students R200". A Performance has none when its sources give no price, as the CPO's calendar does.
 _Avoid_: Concession (as a record type), rate, fare
 
 **Upcoming**:
