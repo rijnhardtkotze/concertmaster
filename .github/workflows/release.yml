@@ -1,0 +1,77 @@
+name: release
+
+# Run by hand from the Actions tab, on the branch being released.
+# Batches the unreleased changie fragments into a version, updates CHANGELOG.md,
+# commits and tags it, and creates a GitHub Release with that version's notes.
+# If a run tagged the version but failed to publish the Release, run it again with
+# the same explicit version: it skips straight to publishing.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "An explicit version such as v2.0.0, or major, minor, patch or auto"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Resume a release that is already tagged
+        id: resume
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/$VERSION" > /dev/null; then
+            echo "$VERSION is already tagged. Publishing its Release only."
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Batch and merge the changelog
+        id: changelog
+        if: steps.resume.outputs.tagged != 'true'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          changie="npx --yes changie@$(node -p "require('./package.json').devDependencies.changie")"
+          $changie batch "$VERSION"
+          released=$($changie latest)
+          $changie merge
+          echo "version=$released" >> "$GITHUB_OUTPUT"
+      - name: Commit, tag and push
+        if: steps.resume.outputs.tagged != 'true'
+        env:
+          RELEASED: ${{ steps.changelog.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md .changes
+          git commit -m "release: $RELEASED"
+          git tag -a "$RELEASED" -m "$RELEASED"
+          # Atomic: the branch and the tag land together or not at all. If the branch moved
+          # since checkout, nothing is pushed and the run can simply be started again.
+          git push --atomic origin "HEAD:$GITHUB_REF_NAME" "refs/tags/$RELEASED"
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASED: ${{ steps.changelog.outputs.version || inputs.version }}
+        run: |
+          if gh release view "$RELEASED" > /dev/null 2>&1; then
+            echo "The $RELEASED Release already exists."
+            exit 0
+          fi
+          # Read the notes from the tagged commit, so a resumed run works from any checkout.
+          git show "$RELEASED:.changes/$RELEASED.md" > release-notes.md
+          gh release create "$RELEASED" --title "$RELEASED" --notes-file release-notes.md --verify-tag
