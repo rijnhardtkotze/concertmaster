@@ -1,0 +1,49 @@
+name: dependabot-changelog
+
+# Dependabot's pull requests carry no changie fragment, so the `changelog` check in
+# ci.yml fails them. This commits one to each, then dispatches ci.yml on the new commit,
+# since a push made with GITHUB_TOKEN starts no pull_request run. The check itself has
+# no exemption for Dependabot.
+#
+# Plain pull_request, not pull_request_target: Dependabot runs honour the permissions
+# key, so the token can write without the privileged trigger. The job still never
+# installs or runs the pull request's dependencies, only the script, with Node built-ins.
+#
+# Once this commits to its branch, Dependabot stops rebasing the pull request on its
+# own. Comment `@dependabot rebase` to make it; this job then adds a fresh fragment.
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  fragment:
+    # The pull request's author, not the actor: re-runs and pushes by others change the actor.
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # commit the fragment to the pull request's branch
+      pull-requests: read # read the pull request's files and Dependabot's metadata
+      actions: write # dispatch ci.yml on the new commit
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts/dependabot-changelog.ts
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Commit a fragment and re-run ci.yml
+        run: node scripts/dependabot-changelog.ts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          UPDATED_DEPENDENCIES_JSON: ${{ steps.metadata.outputs.updated-dependencies-json }}
