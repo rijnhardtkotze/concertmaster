@@ -36,7 +36,7 @@ Every commit is **atomic** and **green**.
 - **Copyright** (ADR 0003). Persist only Fetch records, which carry no body, and Extractions that passed the copyright guard. Source bodies live in the Actions cache during a run and nowhere else. The guard runs in the extract stage, before anything is saved.
 - **Secrets.** Credentials come from environment variables only. The pre-commit hook and CI reject anything shaped like an Anthropic key.
 - **Models.** Sonnet 5 and Opus 5 take `effort` only. Haiku 4.5 is the determinism comparison and takes `temperature: 0`.
-- **Time.** Every timestamp is South African Standard Time with an explicit `+02:00` offset, all year round.
+- **Time.** Listing and source timestamps are South African Standard Time with an explicit `+02:00` offset, all year round. Run metadata, such as the golden runner's `ran_at`, stays in UTC.
 - **Copy.** Site copy is localised South African English, titles and playlist names included.
 - **Golden tests.** `pnpm run golden` makes live model calls. Run it when the extraction prompt or the extraction code changes.
 
