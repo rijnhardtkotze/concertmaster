@@ -91,7 +91,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 #### 3. Dedupe and merge
 
 - [ ] Two Extractions describe the same Performance when they share Venue and normalised title and start within 60 minutes of each other. If one source document lists two start times, they are two Performances however close. A fuzzy title match above the current threshold is the fallback. This keeps v1's tested rule in `src/lib/dedupe.ts`.
-- [ ] Performances group into one Production when they share a Presenter and normalised title and every start falls within 60 days.
+- [ ] Performances group into one Production when they share a Presenter and normalised title and no two consecutive starts are more than 60 days apart. A run of any length stays one Production. A revival after a longer gap is a new one.
 - [ ] Where sources disagree on a field, the higher Source role wins: presenter, then venue, then aggregator, then vendor. Between equal roles, the most recent fetch wins.
 - [ ] Every field on a Production and a Performance records its Field lineage: the Extraction that supplied the current value (ADR 0009).
 - [ ] A Work matches on Composer, normalised title and catalogue number where given. A miss creates the Work and lists it in the Review issue as information only (ADR 0010).
