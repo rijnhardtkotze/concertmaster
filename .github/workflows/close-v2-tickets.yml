@@ -1,0 +1,47 @@
+name: close-v2-tickets
+
+# GitHub only honours "Closes #n" on merges into the default branch (main).
+# Until cutover, v2 work merges into v2, so this closes the referenced tickets itself.
+on:
+  pull_request:
+    types: [closed]
+    branches: [v2]
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const pattern = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi;
+            const numbers = new Set([...(pr.body ?? "").matchAll(pattern)].map((m) => Number(m[1])));
+            // Only tickets: an issue with a release label, and never one the pipeline manages.
+            const RELEASE = ["v2", "v2.1", "v3"];
+            const PIPELINE = ["review-queue", "ingest-failure"];
+            const failed = [];
+            for (const issue_number of numbers) {
+              try {
+                const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
+                if (issue.pull_request || issue.state === "closed") continue;
+                const labels = issue.labels.map((l) => (typeof l === "string" ? l : l.name));
+                if (!labels.some((l) => RELEASE.includes(l)) || labels.some((l) => PIPELINE.includes(l))) {
+                  core.notice(`left #${issue_number} open: not a release ticket`);
+                  continue;
+                }
+                await github.rest.issues.createComment({ ...context.repo, issue_number, body: `Merged into v2 in #${pr.number}.` });
+                await github.rest.issues.update({ ...context.repo, issue_number, state: "closed", state_reason: "completed" });
+                core.info(`closed #${issue_number}`);
+              } catch (error) {
+                // One bad reference must not leave the other tickets open.
+                core.warning(`could not close #${issue_number}: ${error.message}`);
+                failed.push(issue_number);
+              }
+            }
+            if (failed.length) core.setFailed(`could not close ${failed.map((n) => `#${n}`).join(", ")}`);
