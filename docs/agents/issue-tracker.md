@@ -4,7 +4,7 @@ Tickets and specs for this repo are GitHub Issues in `rijnhardtkotze/concertmast
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..." --label ready-for-agent`. Use a heredoc for multi-line bodies.
+- **Create a ticket**: `gh issue create --title "..." --body "..." --milestone "v2: Supabase rebuild" --label v2,schema,ready-for-agent`. Swap in the ticket's milestone, its matching release label and one area label, as set out under "Milestones and labels" below. Leave out `ready-for-agent` for `design` work. Use a heredoc for multi-line bodies.
 - **Read an issue**: `gh issue view <number> --comments`.
 - **List tickets**: `gh issue list --state open --label ready-for-agent --json number,title,body,labels`.
 - **Comment**: `gh issue comment <number> --body "..."`.
