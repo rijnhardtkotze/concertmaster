@@ -1,0 +1,3 @@
+kind: Changed
+body: Extraction now returns each Performance in the v2 shape, with its Production's Genre, Series, Season, Credits and Programme (Works and intervals), its Performance status and Price tiers, and the curated list of South African Composers sent as COMPOSERS_ZA; the golden cases are relabelled to match.
+time: 2026-09-26T15:25:32.368019269+02:00
