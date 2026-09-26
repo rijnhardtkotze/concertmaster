@@ -4,6 +4,13 @@ on:
   pull_request:
   push:
     branches: [main]
+  # dependabot-changelog.yml starts this after it commits a fragment to a Dependabot pull
+  # request: a push made with GITHUB_TOKEN starts no pull_request run of its own.
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "The pull request's base branch, such as v2"
+        required: true
 
 permissions:
   contents: read
@@ -29,7 +36,7 @@ jobs:
     # Every pull request adds at least one changie fragment. No exceptions, no skip label.
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,7 +44,7 @@ jobs:
           persist-credentials: false
       - name: Require a new fragment in .changes/unreleased/
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REF: ${{ github.base_ref || inputs.base_ref }}
         run: |
           added=$(git diff --name-only --diff-filter=A "origin/$BASE_REF...HEAD" -- '.changes/unreleased/*.yaml')
           if [ -z "$added" ]; then
