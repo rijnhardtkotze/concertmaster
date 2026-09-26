@@ -120,7 +120,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 
 An Astro static build reads the published views at build time (ADR 0004).
 
-- [ ] An ingest run that changes the listings builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets (ADR 0013).
+- [ ] Every nightly run builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets, whether or not the listings changed, so the structured data never lists past concerts for long (ADR 0013, ADR 0019).
 - [ ] The home page is the diary: Upcoming Performances, one row each, grouped by month and soonest first. Each row shows date, time, title, Credits, Venue, price and status.
 - [ ] The diary filters by date (everything ahead, tonight, this week, this weekend) and by city.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
@@ -193,6 +193,6 @@ There is no hard deadline. The work ships in this order, each phase a set of ver
 2. **CPO end to end.** Source to Postgres to a Production page, with tests.
 3. **Quicket end to end.** Brings in the JPO and the Collective.
 4. **Review and alerts.** Review queue, Source failing issues and the nightly schedule on Postgres.
-5. **The listings site.** Home, Production and Venue pages, deploy on rebuild.
+5. **The listings site.** Home, Production and Venue pages, built and deployed every night.
 6. **Go-live and cutover.** The `-s ours` merge and the README update.
 7. **P1 slices.** One Source at a time, then the listing improvements.
