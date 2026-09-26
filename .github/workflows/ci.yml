@@ -25,6 +25,28 @@ jobs:
       - run: pnpm run test
       - run: pnpm run check-secrets
 
+  changelog:
+    # Every pull request adds at least one changie fragment. No exceptions, no skip label.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require a new fragment in .changes/unreleased/
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          added=$(git diff --name-only --diff-filter=A "origin/$BASE_REF...HEAD" -- '.changes/unreleased/*.yaml')
+          if [ -z "$added" ]; then
+            echo "::error::Add a changelog fragment: pnpm run change --kind <Added|Changed|Deprecated|Removed|Fixed|Security> --body \"...\""
+            exit 1
+          fi
+          echo "Fragments added:"
+          echo "$added"
+
   golden:
     # Live extraction over tests/golden/cases (two calls per case, on the subscription
     # or a few cents of API). Per-field table lands in the job summary.
