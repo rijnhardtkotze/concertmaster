@@ -31,6 +31,14 @@ Every commit is **atomic** and **green**.
 2. **Green.** `pnpm run typecheck`, `pnpm run lint` and `pnpm run test` all pass.
 3. **Subject.** Prefix it with the area: `ingest: …`, `schema: …`, `docs(adr): …`.
 
+## How the changelog works
+
+**Every pull request adds a changie fragment.** CI fails without one, whatever the change.
+
+1. Run `pnpm run change --kind <Kind> --body "<one sentence>"` and commit the file it writes to `.changes/unreleased/`. Kinds: Added, Changed, Deprecated, Removed, Fixed, Security.
+2. Write the body for someone reading the release notes. Say what changed for them, in the glossary's terms.
+3. Releases come only from the `release` workflow, run by hand with a version such as `v2.0.0`. It is the one thing that commits straight to a branch: it writes `CHANGELOG.md`, tags the version and creates the GitHub Release.
+
 ## The rules that hold everywhere
 
 - **Copyright** (ADR 0003). Persist only Fetch records, which carry no body, and Extractions that passed the copyright guard. Source bodies live in the Actions cache during a run and nowhere else. The guard runs in the extract stage, before anything is saved.
