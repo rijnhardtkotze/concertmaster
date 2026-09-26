@@ -55,5 +55,5 @@ Postgres is the source of truth. The project is `Concertmaster`, ref `egturlxzxg
 
 1. **Postgres only** in the first v2 release: tables, views, constraints and row-level security. Any other Supabase product needs a new ADR first (ADR 0001).
 2. **Migrations change the schema.** SQL files in `supabase/migrations/`, made with the Supabase CLI and applied by CI: from a push to `v2` until cutover, then from `main` (ADR 0015). The dashboard and MCP connectors stay read-only on the production schema.
-3. **Row-level security on every table.** The anon role gets `select` on published views and nothing else (ADR 0004).
+3. **Tables in `private`, Published views in `api`.** Every table lives in the unexposed `private` schema with row-level security on. The Data API exposes only `api`, which holds the Published views as materialised views that merge refreshes. The anon role gets `select` on those and nothing else. Pipeline SQL is always schema-qualified (ADR 0004, ADR 0016).
 4. **The pipeline connects to Postgres directly**, with the pooler connection string, so merge can write in one transaction. It doesn't use supabase-js or the service key. Only the site's build uses supabase-js, with the anon key (ADR 0014).
