@@ -54,5 +54,6 @@ Every commit is **atomic** and **green**.
 Postgres is the source of truth. The project is `Concertmaster`, ref `egturlxzxgyaugiyybqe`.
 
 1. **Postgres only** in the first v2 release: tables, views, constraints and row-level security. Any other Supabase product needs a new ADR first (ADR 0001).
-2. **Migrations change the schema.** SQL files in `supabase/migrations/`, made with the Supabase CLI and applied by CI (ADR 0012). The dashboard and MCP connectors stay read-only on the production schema.
+2. **Migrations change the schema.** SQL files in `supabase/migrations/`, made with the Supabase CLI and applied by CI: from a push to `v2` until cutover, then from `main` (ADR 0015). The dashboard and MCP connectors stay read-only on the production schema.
 3. **Row-level security on every table.** The anon role gets `select` on published views and nothing else (ADR 0004).
+4. **The pipeline connects to Postgres directly**, with the pooler connection string, so merge can write in one transaction. It doesn't use supabase-js or the service key. Only the site's build uses supabase-js, with the anon key (ADR 0014).
