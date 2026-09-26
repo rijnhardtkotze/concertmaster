@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by 0014
 ---
 
 # The ingestion pipeline stays on GitHub Actions and writes to Postgres
