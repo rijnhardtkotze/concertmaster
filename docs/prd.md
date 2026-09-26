@@ -68,7 +68,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
-- [ ] Every Venue stores an address, city, province, a map location, and optional doors-open and parking notes. Unknown notes show as unconfirmed.
+- [ ] Every Venue stores what its sources give: address, city, province, map location, and doors-open and parking notes. Anything unknown shows as unconfirmed, and the map and directions links fall back from the map location to the address to the Venue's name and city (ADR 0018).
 - [ ] A Performance has zero or more Price tiers, each a name and an amount in rand. With none, the price is unknown and the diary shows "Price to come". With tiers, it shows the highest and the lowest beneath it.
 - [ ] A Programme is an ordered list of items. Each item is a Work or an interval with its length.
 - [ ] Every Production has one Genre from the fixed list in `CONTEXT.md`. Extraction picks it, and a Production it can't place goes to review.
