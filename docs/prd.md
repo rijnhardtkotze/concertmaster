@@ -108,7 +108,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 - [ ] A Performance goes to review when its extraction confidence is below 0.75, its Venue is unknown, or it fails validation.
 - [ ] A decision holds until that Performance's content changes at the source.
 - [ ] A Source that fails three runs in a row opens a `Source failing: <slug>` issue. The issue closes itself when the Source recovers.
-- [ ] Unknown Venues wait in the Review queue. Approving one adds it to the curated list.
+- [ ] Nothing is seeded (ADR 0018). Every new Venue waits in the Review queue, and approving it creates the Venue. A Person is South African only when a source says so.
 
 #### 5. Sources
 
