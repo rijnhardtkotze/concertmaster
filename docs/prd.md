@@ -87,6 +87,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 - [ ] Extraction keeps Performances from 7 days before the fetch date to 24 months after it. The validator no longer asserts that a start is in the future.
 - [ ] Sonnet 5 and Opus 5 calls use `effort`. Haiku 4.5 is the determinism comparison and uses `temperature: 0`.
 - [ ] Every timestamp is stored with an explicit `+02:00` offset.
+- [ ] The pipeline's tunable numbers, such as the 0.75 review threshold, live in `private.setting` and change only by migration. Extract builds its JSON Schema, validator and prompt from the database enums, settings and South African Composers, and keeps every rendered prompt (ADR 0017).
 
 #### 3. Dedupe and merge
 
