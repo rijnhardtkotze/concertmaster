@@ -92,7 +92,9 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 - [ ] Every field on a Production and a Performance records its Field lineage: the Extraction that supplied the current value (ADR 0009).
 - [ ] A Work matches on Composer, normalised title and catalogue number where given. A miss creates the Work and lists it in the Review issue as information only (ADR 0010).
 - [ ] Performances missing from all their Sources for three runs in a row become Unlisted. They are hidden, noted in the Review issue and never deleted.
-- [ ] A Performance status of cancelled, postponed or sold out shows on the site as stated by the source.
+- [ ] A Performance status of few left, sold out, postponed or cancelled shows on the site as stated by the source. Scheduled shows as "On sale".
+- [ ] A Performance whose Price tiers are all zero shows as "Free". One whose start time is missing shows "Time to come" and is labelled "Unconfirmed".
+- [ ] A Performance with no date or no Venue never reaches the site. It waits in the Review queue.
 
 #### 4. Review and alerts
 
