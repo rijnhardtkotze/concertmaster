@@ -34,7 +34,7 @@ The notify stage owns two kinds of issue: the `Review queue` issue (label `revie
 
 ## Pull requests
 
-Pull requests for v2 tickets target the `v2` branch. Reference the ticket with `Closes #<n>`.
+Pull requests for v2 tickets target the `v2` branch. Put `Closes #<n>` in the body for each ticket. GitHub only acts on that keyword for merges into `main`, so the `close-v2-tickets` workflow closes the tickets when the pull request merges into `v2`.
 
 **PRs as a request surface: no.**
 
