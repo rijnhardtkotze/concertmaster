@@ -2,10 +2,15 @@
 # Actions are pinned to commit SHAs in the workflows; Dependabot bumps the SHA and
 # the version comment together. Its PRs run the `check` job but not `golden`
 # (that job only runs for the owner's PRs, as it gets the extraction token).
+#
+# Until cutover, version updates target v2, since main is frozen. Remove both
+# `target-branch` lines at cutover. Security updates ignore `target-branch`: GitHub
+# always raises them against the default branch.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    target-branch: v2
     schedule:
       interval: monthly
     groups:
@@ -16,6 +21,7 @@ updates:
 
   - package-ecosystem: npm
     directory: /
+    target-branch: v2
     schedule:
       interval: monthly
     open-pull-requests-limit: 5
