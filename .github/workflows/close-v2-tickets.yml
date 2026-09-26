@@ -25,15 +25,23 @@ jobs:
             // Only tickets: an issue with a release label, and never one the pipeline manages.
             const RELEASE = ["v2", "v2.1", "v3"];
             const PIPELINE = ["review-queue", "ingest-failure"];
+            const failed = [];
             for (const issue_number of numbers) {
-              const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
-              if (issue.pull_request || issue.state === "closed") continue;
-              const labels = issue.labels.map((l) => (typeof l === "string" ? l : l.name));
-              if (!labels.some((l) => RELEASE.includes(l)) || labels.some((l) => PIPELINE.includes(l))) {
-                core.notice(`left #${issue_number} open: not a release ticket`);
-                continue;
+              try {
+                const { data: issue } = await github.rest.issues.get({ ...context.repo, issue_number });
+                if (issue.pull_request || issue.state === "closed") continue;
+                const labels = issue.labels.map((l) => (typeof l === "string" ? l : l.name));
+                if (!labels.some((l) => RELEASE.includes(l)) || labels.some((l) => PIPELINE.includes(l))) {
+                  core.notice(`left #${issue_number} open: not a release ticket`);
+                  continue;
+                }
+                await github.rest.issues.createComment({ ...context.repo, issue_number, body: `Merged into v2 in #${pr.number}.` });
+                await github.rest.issues.update({ ...context.repo, issue_number, state: "closed", state_reason: "completed" });
+                core.info(`closed #${issue_number}`);
+              } catch (error) {
+                // One bad reference must not leave the other tickets open.
+                core.warning(`could not close #${issue_number}: ${error.message}`);
+                failed.push(issue_number);
               }
-              await github.rest.issues.createComment({ ...context.repo, issue_number, body: `Merged into v2 in #${pr.number}.` });
-              await github.rest.issues.update({ ...context.repo, issue_number, state: "closed", state_reason: "completed" });
-              core.info(`closed #${issue_number}`);
             }
+            if (failed.length) core.setFailed(`could not close ${failed.map((n) => `#${n}`).join(", ")}`);
