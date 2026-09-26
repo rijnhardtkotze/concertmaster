@@ -39,7 +39,7 @@ A static site built once a night doesn't need views that are live to the second.
 
 ## Consequences
 
-- The row-level security test changes. As anon, `select` works on each view in `api` and fails on every table in `private`, which anon cannot even see.
+- The row-level security test changes. Because anon can't see `private` at all, a failed `select` no longer proves row-level security is on, so the test checks directly that it is enabled on every table in `private`. Separately, as anon, `select` works on each view in `api` and fails on every table in `private`.
 - Supabase's advisor shows one warning per materialised view (lint 0016). It is expected, and nothing else from the advisor is.
 - The views are only as fresh as the last merge. A migration that creates or changes a view builds it `with data`, so it is right from the moment it lands.
 - Merge's transaction takes a little longer, for the refresh. At a few thousand Performances this is seconds.
