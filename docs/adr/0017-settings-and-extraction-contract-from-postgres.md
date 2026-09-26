@@ -16,7 +16,7 @@ Postgres is the source of truth (ADR 0001). This extends that to what the pipeli
 6. **The fixed lists are the database enums.** Genre, Performance status and premiere exist once, as Postgres enums (#35). Nothing in code lists their values.
 7. **The extraction contract is built at extract time.** Before its first model call, extract reads the enums, the settings it needs and `COMPOSERS_ZA`, and builds the JSON Schema, the Zod validator and the prompt from templates in the repo. `event-schema.json` and the hard-coded lists in `extraction-prompt.md` go; the prompt file becomes a template.
 8. **Every rendered prompt is kept.** `private.prompt_version` holds the hash, the rendered prompt, the rendered JSON Schema and when it was first used. Each Extraction points at its row. The prompt version is that hash, so any change to an enum, a setting in the prompt, `COMPOSERS_ZA` or the template makes a new version and re-extracts unchanged documents (spec #28, user story 53). A document skips extraction only when its content hash already has an Extraction under the current prompt version. The prompt is our own text, so storing it doesn't touch ADR 0003.
-9. **`COMPOSERS_ZA` is the Persons with `locale` `en-ZA` who are the Composer of at least one Work.** The same set feeds the prompt block and normalise's South African Composer match. A Person gets `en-ZA` as a Composer only from the curated seed (spec #28), and the seed stays 35 names from `data/composers-sa.json`, with no Works.
+9. **`COMPOSERS_ZA` is the Persons with `locale` `en-ZA` who are the Composer of at least one Work.** It goes in the prompt so the model keeps those names spelled consistently, and normalise links a bare surname that matches exactly one of them to that Person, flagged for review. A Person gets `en-ZA` only when a source says so, whatever their role (ADR 0018). Nothing is seeded.
 
 ## Why
 
@@ -34,10 +34,11 @@ Counting only Composers of a Work keeps the list to people the pipeline has actu
 - **Storing only the prompt hash on the Extraction.** Rejected: the text the model saw would be lost.
 - **A `curated_composer` flag on Person, or counting seeded Persons without a Work.** Rejected in favour of the Work rule.
 - **Seeding one Work per curated Composer.** Rejected: up-front research for 35 names, and the Works would have to be right.
+- **Seeding the 35 names from `data/composers-sa.json` at all.** Rejected by ADR 0018: nothing is seeded.
 
 ## Consequences
 
-- **`COMPOSERS_ZA` starts empty.** The seed has no Works, so on the first runs the prompt shows no South African Composers and normalise's match (including the bare-surname flag) finds none. A seeded Person joins the list once merge links a Work to them, which happens when their Work is first programmed and the Composer's name matches the seeded Person. South African content on the site is unaffected: the Published views derive it from each Composer's `locale`, not from `COMPOSERS_ZA`.
+- **`COMPOSERS_ZA` starts empty** and fills as sources name South African Composers and their Works are programmed. South African content on the site comes from each Composer's `locale` in the Published views, so it appears as soon as a source says a Composer is South African.
 - When a South African Composer joins `COMPOSERS_ZA`, the prompt version changes, so every unchanged document is re-extracted on the next run. Early on this can happen several nights running, until the list settles. The extract time budget caps the cost per night.
 - Extract needs the database before its first model call, and so do the golden cases: they read the enums and settings from a local Supabase stack. The TypeScript types for Genre, status and premiere become strings checked by the run-time validator rather than literal unions.
 - The Extraction table references `private.prompt_version` instead of holding a free-text prompt version.
