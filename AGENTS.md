@@ -45,6 +45,6 @@ pnpm run golden                      # live extraction regression; costs model c
 ## Supabase
 
 - Project `Concertmaster`, ref `egturlxzxgyaugiyybqe` (eu-west-1, Postgres 17).
-- Postgres is the source of truth. Until the first v2 release goes live, Supabase is used as Postgres only: no Auth, Storage, Edge Functions or pg_cron (ADR 0001).
+- Postgres is the source of truth. In the first v2 release, Supabase is used as Postgres only: no Auth, Storage, Edge Functions or pg_cron (ADR 0001).
 - The schema changes only through SQL migrations in `supabase/migrations/`, made with the Supabase CLI and applied by CI (ADR 0012). Never change the production schema through the dashboard or an MCP connector.
 - Row-level security is enabled on every table. The anon role can only `select` from published views (ADR 0004).
