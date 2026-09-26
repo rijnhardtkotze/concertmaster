@@ -37,7 +37,8 @@ Every commit is **atomic** and **green**.
 
 1. Run `pnpm run change --kind <Kind> --body "<one sentence>"` and commit the file it writes to `.changes/unreleased/`. Kinds: Added, Changed, Deprecated, Removed, Fixed, Security.
 2. Write the body for someone reading the release notes. Say what changed for them, in the glossary's terms.
-3. Releases come only from the `release` workflow, run by hand with a version such as `v2.0.0`. It is the one thing that commits straight to a branch: it writes `CHANGELOG.md`, tags the version and creates the GitHub Release.
+3. Dependabot's pull requests get theirs from the `dependabot-changelog` workflow: Security when the update fixes a GitHub advisory, Changed otherwise.
+4. Releases come only from the `release` workflow, run by hand with a version such as `v2.0.0`. It is the one thing that commits straight to a branch: it writes `CHANGELOG.md`, tags the version and creates the GitHub Release.
 
 ## The rules that hold everywhere
 
