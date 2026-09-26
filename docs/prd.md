@@ -125,6 +125,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 - [ ] The diary filters by date (everything ahead, tonight, this week, this weekend) and by city.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
 - [ ] Each Venue has a page with its Upcoming Performances, address, map, directions link, and doors-open and parking notes where known.
+- [ ] Each Production page carries schema.org structured data as JSON-LD: one `MusicEvent` per Upcoming Performance, so search engines can show the concerts as event results. It is built from the Production view alone.
 - [ ] Unlisted Performances do not appear anywhere on the site.
 - [ ] The site goes live on `concertmaster.co.za`, with `classicalmusic.co.za` redirecting to it. Both are Cloudflare zones.
 - [ ] The crawler page at `/about/crawler` explains the bot, its user agent and how to opt out.
@@ -151,9 +152,8 @@ These sit in two milestones after v2 goes live.
 
 **v3: Site enhancements**
 
-1. **Structured data** (schema.org `MusicEvent`) on Production pages, for search engines.
-2. **A Season and Series page** per presenter.
-3. **Search, past concerts, Featured and Writing**, as tracked in #23.
+1. **A Season and Series page** per presenter.
+2. **Search, past concerts, Featured and Writing**, as tracked in #23.
 
 ### P2: design for, do not build
 
