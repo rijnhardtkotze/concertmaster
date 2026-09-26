@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
   # dependabot-changelog.yml starts this after it commits a fragment to a Dependabot pull
-  # request: a push made with GITHUB_TOKEN starts no pull_request run of its own.
+  # request: a push made with GITHUB_TOKEN starts no pull_request run without approval.
   workflow_dispatch:
     inputs:
       base_ref:
