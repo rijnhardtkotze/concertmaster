@@ -13,3 +13,4 @@ The old schema had one flat "event" record per sitting ("a three-night run is th
 ## Consequences
 
 - Dedupe now works at two levels. Matching Performances is the old dedupe-key problem, and grouping them into Productions is a new rule the spec has to define.
+- The diary (the site's main listing) still shows one row per Performance, in date order, because a concert-goer scans by date. The Production groups its Performances on its own page. Editorial links to the Production.

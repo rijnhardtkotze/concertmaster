@@ -35,7 +35,7 @@ Nothing is public yet. The rebuild is the first thing people will see.
 ### Concert-goers
 
 1. As a concert-goer in Johannesburg or Cape Town, I want one list of upcoming classical Performances near me, so that I stop checking five sites.
-2. As a concert-goer, I want a run of three nights shown once, with its three dates, so that the list stays short.
+2. As a concert-goer, I want a concert's page to list every date it plays, so that I can pick the night that suits me.
 3. As a concert-goer, I want to see the Programme, the Ensemble and the soloists before I buy, so that I can decide whether to go.
 4. As a concert-goer, I want a cancelled or postponed Performance marked as such, so that I know before I travel.
 5. As a concert-goer, I want a link to buy tickets from the presenter or the ticketing site, so that I can go from the guide straight to a seat.
@@ -114,7 +114,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 An Astro static build reads the published views at build time (ADR 0004).
 
 - [ ] An ingest run that changes the listings builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets (ADR 0013).
-- [ ] The home page lists Upcoming Productions, soonest first, each with its dates, Venue and Presenter.
+- [ ] The home page is the diary: Upcoming Performances, one row each, grouped by month and soonest first. Each row shows date, time, title, Credits, Venue, price and status.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
 - [ ] Each Venue has a page with its Upcoming Productions.
 - [ ] Unlisted Performances do not appear anywhere on the site.
