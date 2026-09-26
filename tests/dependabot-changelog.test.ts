@@ -5,6 +5,7 @@ import {
   fragmentBody,
   fragmentPath,
   fragmentYaml,
+  headIsOurFragment,
 } from "../scripts/dependabot-changelog.ts";
 
 const cheerio = { dependencyName: "cheerio", packageEcosystem: "npm_and_yarn", prevVersion: "1.2.0", newVersion: "1.3.0" };
@@ -104,5 +105,19 @@ describe("the fragment file", () => {
     expect(fragmentYaml("Security", 'Fixes "a": b', time)).toBe(
       'kind: Security\nbody: "Fixes \\"a\\": b"\ntime: 2026-09-26T09:22:34.567Z\n',
     );
+  });
+});
+
+describe("headIsOurFragment", () => {
+  const ours = { author: { login: "github-actions[bot]" }, commit: { message: "changes: add a fragment for #12" } };
+
+  it("recognises this script's own commit on the same pull request", () => {
+    expect(headIsOurFragment(ours, 12)).toBe(true);
+  });
+
+  it("ignores Dependabot's commits, people's commits and other pull requests", () => {
+    expect(headIsOurFragment({ ...ours, author: { login: "dependabot[bot]" } }, 12)).toBe(false);
+    expect(headIsOurFragment({ ...ours, author: null }, 12)).toBe(false);
+    expect(headIsOurFragment(ours, 13)).toBe(false);
   });
 });
