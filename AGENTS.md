@@ -60,3 +60,13 @@ Postgres is the source of truth. The project is `Concertmaster`, ref `egturlxzxg
 1. **Postgres only, for now.** In the first v2 release we use no Auth, Storage, Edge Functions or pg_cron (ADR 0001).
 2. **Migrations are the only way to change the schema.** Write them as SQL in `supabase/migrations/` with the Supabase CLI. CI applies them (ADR 0012). Never change the production schema through the dashboard or an MCP connector.
 3. **Row-level security is on for every table.** The anon role may only `select` from published views (ADR 0004).
+
+## Agent skills
+
+### Issue tracker
+
+Tickets are GitHub Issues in this repo, labelled `ready-for-agent`. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single context: `CONTEXT.md` and `docs/adr/` at the root. See `docs/agents/domain.md`.
