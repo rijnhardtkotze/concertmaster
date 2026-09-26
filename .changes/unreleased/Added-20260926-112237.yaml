@@ -1,0 +1,3 @@
+kind: Added
+body: Tickets named with a closing keyword now close when their pull request merges into v2.
+time: 2026-09-26T11:22:37.576735353+02:00
