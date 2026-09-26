@@ -135,6 +135,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 - [ ] The v1 file pipeline stays paused. Postgres starts empty and fills from the first v2 run.
 - [ ] At go-live, `v2` takes `main` with `git merge -s ours origin/main` and `main` fast-forwards to `v2`.
+- [ ] Dependabot drops `target-branch: v2` and follows the default branch again.
 - [ ] The README, `data/` and `data/LICENSE` are updated to match ADR 0011.
 
 ### P1: fast follow after launch
