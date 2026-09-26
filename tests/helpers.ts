@@ -1,3 +1,4 @@
+import type { ExtractedPerformance } from "../src/lib/extraction-schema.ts";
 import { ComposerIndex, VenueIndex, type VenueRecord } from "../src/lib/reference.ts";
 import type { Event } from "../src/lib/schema.ts";
 import { normaliseEvent, type DocumentInfo } from "../src/lib/normalise.ts";
@@ -15,7 +16,40 @@ export const ctx = () => ({
   now: new Date("2026-09-01T03:00:00+02:00"),
 });
 
-/** A record as the extractor returns it (structured output: every key present, nullable). */
+/** A v2 record as the extractor returns it: one Performance, with its Production's fields. */
+export function extractedPerformance(over: { production?: Record<string, unknown>; performance?: Record<string, unknown> } & Record<string, unknown> = {}): ExtractedPerformance {
+  const { production, performance, ...rest } = over;
+  return {
+    production: {
+      title: "Spring Symphony",
+      genre: "orchestral",
+      series: null,
+      season: null,
+      presenter: "Johannesburg Philharmonic Orchestra",
+      languages: [],
+      description: "The orchestra plays a symphony.",
+      credits: [{ name: "Daniel Boico", kind: "person", role: "conductor", instrument: null, locale: null }],
+      programme: [{ kind: "work", composer: "Ludwig van Beethoven", title: "Symphony No. 5", catalogue: "Op. 67", movements: null, arranger: null, premiere: null }],
+      ...production,
+    },
+    performance: {
+      start_date: "2026-10-15",
+      start_time: "19:30",
+      doors_time: null,
+      venue: { name: "Linder Auditorium", address: null, city: "Johannesburg", province: "Gauteng" },
+      status: "scheduled",
+      price_tiers: [{ name: "General", amount: 350 }],
+      ticket_url: "https://www.quicket.co.za/events/1-x/",
+      ...performance,
+    },
+    confidence: 0.9,
+    needs_review: [],
+    extraction_notes: null,
+    ...rest,
+  } as ExtractedPerformance;
+}
+
+/** A v1 record as the extractor returned it (structured output: every key present, nullable). */
 export function rawEvent(over: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     title: "Spring Symphony Concert",
