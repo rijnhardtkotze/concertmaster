@@ -14,7 +14,11 @@ Tickets and specs for this repo are GitHub Issues in `rijnhardtkotze/concertmast
 
 ## Milestones and labels
 
-Every v2 ticket gets the `v2: Supabase rebuild` milestone and the `v2` label. Work for after v2 is live gets `v3: Site enhancements` and `v3`.
+Each ticket gets one milestone and its matching label:
+
+1. `v2: Supabase rebuild` and `v2`: everything the first v2 release needs to go live.
+2. `v2.1: More sources` and `v2.1`: Sources added after launch, and pipeline upkeep such as merging Works.
+3. `v3: Site enhancements` and `v3`: what the site gains after launch.
 
 Add one area label per ticket:
 
