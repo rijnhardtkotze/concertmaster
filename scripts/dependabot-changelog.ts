@@ -111,6 +111,22 @@ export function fragmentYaml(kind: FragmentKind, body: string, time: Date): stri
   return `kind: ${kind}\nbody: ${JSON.stringify(body)}\ntime: ${time.toISOString()}\n`;
 }
 
+/** The message of the commit this script makes. */
+export function fragmentCommitMessage(prNumber: number): string {
+  return `changes: add a fragment for #${prNumber}`;
+}
+
+/**
+ * Whether the pull request's head is this script's own fragment commit. Then a re-run
+ * must dispatch ci.yml again, since the last run may have committed and failed to dispatch.
+ */
+export function headIsOurFragment(
+  head: { author: { login: string } | null; commit: { message: string } },
+  prNumber: number,
+): boolean {
+  return head.author?.login === "github-actions[bot]" && head.commit.message === fragmentCommitMessage(prNumber);
+}
+
 interface Env {
   token: string;
   repository: string;
@@ -161,8 +177,20 @@ async function main(): Promise<void> {
   const call = api(env.token);
   const repo = `/repos/${env.repository}`;
 
-  // A pull request that already adds a fragment needs nothing. This keeps reopened
-  // pull requests, and branches a person has already fixed, from getting a second one.
+  // A push made with GITHUB_TOKEN starts no pull_request run that goes ahead without a
+  // person's approval, so the checks would not see the fragment on their own.
+  // workflow_dispatch is an event that token can start outright.
+  const dispatch = async () => {
+    await call("POST", `${repo}/actions/workflows/ci.yml/dispatches`, {
+      ref: env.headRef,
+      inputs: { base_ref: env.baseRef },
+    });
+    console.log(`Dispatched ci.yml on ${env.headRef}.`);
+  };
+
+  // A pull request that already adds a fragment gets no second one. This covers reopened
+  // pull requests, and branches a person has already fixed. If the head is our own
+  // fragment commit, this is a re-run after a failed dispatch, so dispatch again.
   for (let page = 1; ; page++) {
     const files = (await call("GET", `${repo}/pulls/${env.prNumber}/files?per_page=100&page=${page}`)) as {
       filename: string;
@@ -170,7 +198,10 @@ async function main(): Promise<void> {
     }[];
     const existing = files.find((f) => f.status === "added" && /^\.changes\/unreleased\/[^/]+\.yaml$/.test(f.filename));
     if (existing) {
-      console.log(`#${env.prNumber} already adds ${existing.filename}. Nothing to do.`);
+      console.log(`#${env.prNumber} already adds ${existing.filename}.`);
+      const pr = (await call("GET", `${repo}/pulls/${env.prNumber}`)) as { head: { sha: string } };
+      const head = (await call("GET", `${repo}/commits/${pr.head.sha}`)) as Parameters<typeof headIsOurFragment>[0];
+      if (headIsOurFragment(head, env.prNumber)) await dispatch();
       return;
     }
     if (files.length < 100) break;
@@ -188,19 +219,12 @@ async function main(): Promise<void> {
   const path = fragmentPath(kind, now);
 
   await call("PUT", `${repo}/contents/${path}`, {
-    message: `changes: add a fragment for #${env.prNumber}`,
+    message: fragmentCommitMessage(env.prNumber),
     content: Buffer.from(fragmentYaml(kind, body, now)).toString("base64"),
     branch: env.headRef,
   });
   console.log(`Committed ${path} (${kind}): ${body}`);
-
-  // A push made with GITHUB_TOKEN starts no pull_request run, so the checks would never
-  // see the fragment. workflow_dispatch is the one event that token can still start.
-  await call("POST", `${repo}/actions/workflows/ci.yml/dispatches`, {
-    ref: env.headRef,
-    inputs: { base_ref: env.baseRef },
-  });
-  console.log(`Dispatched ci.yml on ${env.headRef}.`);
+  await dispatch();
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
