@@ -14,7 +14,7 @@ The data does not inherit the code licence. Third-party source pages are never c
 
 ## How it works
 
-A GitHub Action runs daily at 03:00 SAST. Each stage is a separate script that reads and writes files, so you can run any one of them on its own:
+A GitHub Action runs the pipeline (daily at 03:00 SAST; the schedule is paused for now, so run it by hand from the Actions tab). Each stage is a separate script that reads and writes files, so you can run any one of them on its own:
 
 | stage | reads | writes |
 |---|---|---|

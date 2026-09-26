@@ -45,6 +45,16 @@ export const FETCH = {
   defaultMaxDocuments: 60,
 };
 
+/** A positive number of minutes from the environment; anything else falls back (with a warning) rather than disabling a limit. */
+function positiveMinutes(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  if (Number.isFinite(n) && n > 0) return n;
+  console.warn(`${name}=${JSON.stringify(raw)} is not a positive number of minutes; using ${fallback}`);
+  return fallback;
+}
+
 export const EXTRACT = {
   /** Cheap model for clean HTML/JSON; stronger one for PDFs, per extraction-prompt.md. */
   fastModel: process.env.EXTRACT_MODEL_FAST ?? "claude-haiku-4-5",
@@ -55,6 +65,14 @@ export const EXTRACT = {
   maxAttemptsPerHash: 3,
   /** Hard ceiling on LLM calls per run. Protects against a site that changes every page every day. */
   maxCallsPerRun: Number(process.env.EXTRACT_MAX_CALLS ?? 250),
+  /**
+   * Wall-clock budget for the extract stage. No new document is started after it runs out;
+   * the rest wait for the next run. Keeps the job inside its timeout so the stages after
+   * extract still run and whatever was extracted gets committed.
+   */
+  timeBudgetMs: positiveMinutes("EXTRACT_TIME_BUDGET_MIN", 30) * 60_000,
+  /** Calls still running this long after the budget ran out are cancelled; their documents wait for the next run. */
+  overrunGraceMs: 5 * 60_000,
   concurrency: 3,
   /** USD per million tokens, for the cost line in the step summary. Keep in sync with the pricing page. */
   pricing: {

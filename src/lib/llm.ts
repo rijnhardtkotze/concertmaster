@@ -45,7 +45,7 @@ export function estimateCost(model: string, u: { input: number; output: number; 
   return (u.input * p.input + u.output * p.output + u.cacheRead * p.cacheRead + u.cacheWrite * p.cacheWrite) / 1e6;
 }
 
-export type ExtractRequest = { model: string; system: string; tables: string; document: string };
+export type ExtractRequest = { model: string; system: string; tables: string; document: string; signal?: AbortSignal };
 
 /**
  * Which credentials pay for extraction:
@@ -95,7 +95,7 @@ async function callViaApi(opts: ExtractRequest): Promise<ExtractCallResult> {
 
   let message: Anthropic.Message;
   try {
-    message = await anthropic.messages.stream(params).finalMessage();
+    message = await anthropic.messages.stream(params, { signal: opts.signal }).finalMessage();
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError || err instanceof Anthropic.NotFoundError) {
       throw new FatalLlmError(`Anthropic API: ${redact(err.message)}`, { cause: err });
@@ -184,13 +184,17 @@ export async function callViaClaudeCode(opts: ExtractRequest): Promise<ExtractCa
     let out = "";
     let err = "";
     const timer = setTimeout(() => child.kill("SIGTERM"), 15 * 60_000);
+    const abort = () => child.kill("SIGTERM");
+    opts.signal?.addEventListener("abort", abort, { once: true });
     child.stdout.on("data", (d) => (out += d));
     child.stderr.on("data", (d) => (err += d));
     child.on("error", (e) => reject(new FatalLlmError(`could not start Claude Code: ${e.message}`)));
     child.on("close", (code) => {
       clearTimeout(timer);
+      opts.signal?.removeEventListener("abort", abort);
       fs.rmSync(cwd, { recursive: true, force: true });
-      if (out.trim()) resolve(out);
+      if (opts.signal?.aborted) reject(opts.signal.reason);
+      else if (out.trim()) resolve(out);
       else reject(new Error(`Claude Code exited ${code} with no output: ${redact(err.slice(0, 400))}`));
     });
     child.stdin.end(`${opts.tables}\n\n${opts.document}`);
