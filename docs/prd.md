@@ -110,7 +110,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 
 An Astro static build reads the published views at build time (ADR 0004).
 
-- [ ] An ingest run that changes the listings triggers a rebuild and deploy.
+- [ ] An ingest run that changes the listings builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets (ADR 0013).
 - [ ] The home page lists Upcoming Productions, soonest first, each with its dates, Venue and Presenter.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
 - [ ] Each Venue has a page with its Upcoming Productions.
@@ -154,7 +154,6 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ## What is still open
 
-1. **Where the site is hosted.** Cloudflare Pages or Vercel, and how the ingest run triggers the rebuild. Engineering. Blocks the site slice only.
 2. **The long-term domain.** `concertmaster.co.za` or `classicalmusic.co.za`. It is one line in config. Mine to decide. Does not block.
 3. **The Supabase plan.** Whether the free tier's limits and pausing rules hold for a daily write load. Engineering. Blocks go-live.
 4. **How the site looks.** No design exists yet. A design pass before the site slice. Mine, with design. Blocks the site slice.
