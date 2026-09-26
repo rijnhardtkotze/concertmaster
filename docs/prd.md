@@ -164,14 +164,14 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ## What is still open
 
-1. **How the site looks.** A first mockup exists in Claude Design: [SA Classical Guide website](https://claude.ai/artifact/LbLYrB8rpGJgcuJ7noGpfD). It has the diary on desktop and phone, a concert page on desktop, and the listing states. Mine to finish. Blocks the site slice only. Still missing for the first release:
+1. **How the site looks.** A first mockup exists in Claude Design: [SA Classical Guide website](https://claude.ai/artifact/LbLYrB8rpGJgcuJ7noGpfD). It has the diary on desktop and phone, a concert page on desktop, and the listing states. Mine to finish, tracked in [#22](https://github.com/rijnhardtkotze/concertmaster/issues/22). Blocks the site slice only. Still missing for the first release:
    1. The Venue page.
    2. The concert page on phone.
    3. A concert with several dates.
    4. The About page, with the CC BY 4.0 statement.
    5. The sources and crawler page.
 
-The mockup also shows search, past concerts, a Featured flag and the Writing section. They stay in the design and are out of the first release.
+The mockup also shows search, past concerts, a Featured flag and the Writing section. They stay in the design and are out of the first release, tracked in [#23](https://github.com/rijnhardtkotze/concertmaster/issues/23).
 
 ## How the work is phased
 
