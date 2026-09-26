@@ -36,6 +36,9 @@ importers:
       '@types/node':
         specifier: ^26.6.2
         version: 26.6.2
+      changie:
+        specifier: 1.26.0
+        version: 1.26.0
       eslint:
         specifier: ^10.11.0
         version: 10.11.0
@@ -592,6 +595,10 @@ packages:
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
+
+  changie@1.26.0:
+    resolution: {integrity: sha512-uxNt7qEj5K0m+OzESAABldgUVn3I+KkiMH2gYjDCPJmsr0Qpoc5F6R2udiQkc8SJNsc7vfJBUaoHW8a0emflmg==}
+    hasBin: true
 
   cheerio-select@2.1.0:
     resolution: {integrity: sha512-9v9kG0LvzrlcungtnJtpGNxY+fzECQKhK4EGJX2vByejiMX84MFNQw4UxPJl3bFbTMw+Dfs37XaIkCwTZfLh4g==}
@@ -1608,6 +1615,8 @@ snapshots:
       qified: 0.10.1
 
   chai@6.2.2: {}
+
+  changie@1.26.0: {}
 
   cheerio-select@2.1.0:
     dependencies:
