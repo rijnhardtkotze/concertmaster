@@ -121,6 +121,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 - [ ] An ingest run that changes the listings builds the site in the Action and deploys it with `wrangler deploy` to Cloudflare Workers static assets (ADR 0013).
 - [ ] The home page is the diary: Upcoming Performances, one row each, grouped by month and soonest first. Each row shows date, time, title, Credits, Venue, price and status.
+- [ ] The diary filters by date (everything ahead, tonight, this week, this weekend) and by city.
 - [ ] Each Production has a page with its Performances, Programme, Credits, Series, status and a ticket link.
 - [ ] Each Venue has a page with its Upcoming Performances, address, map, directions link, and doors-open and parking notes where known.
 - [ ] Unlisted Performances do not appear anywhere on the site.
@@ -138,10 +139,9 @@ An Astro static build reads the published views at build time (ADR 0004).
 ### P1: fast follow after launch
 
 1. **The other ten Sources**, one vertical slice each: JPO direct, KZNPO, Symphony Choir of Johannesburg, Vox Chamber Choir, Artscape, Baxter, Webtickets, the Chamber Music Collective direct, Unisa Music Foundation and Old Nectar.
-2. **Filters by city and province** on the listings.
-3. **Structured data** (schema.org `MusicEvent`) on Production pages, for search engines.
-4. **A merge-Works action** to fold duplicate Works together, with alternative names.
-5. **A Season and Series page** per presenter.
+2. **Structured data** (schema.org `MusicEvent`) on Production pages, for search engines.
+3. **A merge-Works action** to fold duplicate Works together, with alternative names.
+4. **A Season and Series page** per presenter.
 
 ### P2: design for, do not build
 
