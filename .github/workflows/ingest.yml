@@ -1,8 +1,10 @@
 name: ingest
 
 on:
-  schedule:
-    - cron: "0 1 * * *" # 03:00 SAST
+  # Nightly schedule paused until extraction is fast enough to clear the backlog.
+  # Restore to resume daily runs at 03:00 SAST:
+  # schedule:
+  #   - cron: "0 1 * * *"
   workflow_dispatch:
     inputs:
       source:
@@ -23,7 +25,11 @@ jobs:
     # Pinned rather than ubuntu-latest: an unattended job shouldn't change OS under us
     # (ubuntu-latest moves to 26.04 from 19 Oct 2026). Bump deliberately.
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    # Extract stops starting new documents after EXTRACT_TIME_BUDGET_MIN (30) and cancels
+    # calls still running 5 minutes later, so a large backlog is worked off over several
+    # runs instead of the job being killed mid-extract (which cancels merge and the commit,
+    # losing the whole run's work).
+    timeout-minutes: 75
     env:
       INGEST_SOURCE: ${{ inputs.source }}
     steps:
