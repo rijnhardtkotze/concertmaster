@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { lastDate, renderQuicketEvent, quicketMatches } from "../src/adapters/quicket.ts";
 import { canonicalUrl } from "../src/adapters/html.ts";
 import { redact } from "../src/lib/log.ts";
-import { loadSystemPrompt, documentBlock } from "../src/lib/prompt.ts";
+import { loadSystemPrompt, documentBlock, referenceBlock } from "../src/lib/prompt.ts";
+import { GENRES, PERFORMANCE_STATUSES, PREMIERES } from "../src/lib/extraction-schema.ts";
+import { loadComposers } from "../src/lib/reference.ts";
 import { parseDecisions, renderReviewIssue } from "../src/lib/review-issue.ts";
 import { chunkText, htmlToText, sharedSpan, titleSimilarity } from "../src/lib/text.ts";
 import { normaliseTimestamp } from "../src/lib/time.ts";
@@ -70,9 +72,26 @@ describe("secrets", () => {
 describe("prompt", () => {
   it("loads the system prompt from extraction-prompt.md", () => {
     const p = loadSystemPrompt();
-    expect(p.startsWith("You extract structured classical music event data")).toBe(true);
+    expect(p.startsWith("You extract structured listings of classical music Performances")).toBe(true);
     expect(p).toContain("Deliberate omissions");
     expect(p).not.toContain("```");
+  });
+
+  it("names every Genre, Performance status and premiere value, in glossary terms", () => {
+    const p = loadSystemPrompt();
+    for (const v of [...GENRES, ...PERFORMANCE_STATUSES, ...PREMIERES]) expect(p, v).toMatch(new RegExp(`\\b${v}\\b`));
+    expect(p).not.toMatch(/\bevents?\b/i);
+    expect(p).not.toContain("SA_COMPOSER_TABLE");
+  });
+
+  it("puts the curated South African composer list in the user message as COMPOSERS_ZA", () => {
+    const composers = loadComposers();
+    expect(composers.length).toBeGreaterThan(0);
+    const block = referenceBlock([], composers);
+    const m = /^COMPOSERS_ZA:\n(.*)$/m.exec(block);
+    expect(m, "COMPOSERS_ZA block").not.toBeNull();
+    expect(JSON.parse(m![1]!)).toEqual(composers);
+    expect(block).not.toContain("SA_COMPOSER_TABLE");
   });
 
   it("builds the documented header block", () => {

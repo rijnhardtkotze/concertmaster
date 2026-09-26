@@ -1,52 +1,72 @@
 [
   {
-    "title": "Heritage Day Symphonic Jazz",
-    "description": "(present)",
-    "start": "2026-09-24T19:00:00+02:00",
-    "venue": {
-      "venue_id": "linder-auditorium",
-      "name": "Linder Auditorium",
-      "city": "Johannesburg",
-      "province": "Gauteng"
+    "production": {
+      "title": "Heritage Day Symphonic Jazz",
+      "genre": "orchestral",
+      "series": "JPO Symphonic Jazz",
+      "season": null,
+      "presenter": "Johannesburg Philharmonic Orchestra",
+      "languages": [],
+      "description": "(present)",
+      "credits": [
+        {
+          "name": "Daniel Boico",
+          "kind": "person",
+          "role": "conductor",
+          "instrument": null,
+          "locale": null
+        },
+        {
+          "name": "Victor Masondo",
+          "kind": "person",
+          "role": "soloist",
+          "instrument": null,
+          "locale": "en-ZA"
+        },
+        {
+          "name": "Lindi Ngonelo",
+          "kind": "person",
+          "role": "soloist",
+          "instrument": null,
+          "locale": "en-ZA"
+        },
+        {
+          "name": "Victor Masondo's Quartet",
+          "kind": "ensemble",
+          "role": "ensemble",
+          "instrument": null,
+          "locale": null
+        },
+        {
+          "name": "Johannesburg Philharmonic Orchestra",
+          "kind": "ensemble",
+          "role": "orchestra",
+          "instrument": null,
+          "locale": null
+        }
+      ],
+      "programme": [
+        {
+          "kind": "work",
+          "composer": "Duke Ellington",
+          "title": "Nutcracker Suite",
+          "catalogue": null,
+          "premiere": null
+        }
+      ]
     },
-    "presenter": "Johannesburg Philharmonic Orchestra",
-    "series": "JPO Symphonic Jazz",
-    "performers": [
-      {
-        "name": "Daniel Boico",
-        "role": "conductor"
+    "performance": {
+      "start_date": "2026-09-24",
+      "start_time": "19:00",
+      "doors_time": null,
+      "venue": {
+        "name": "Linder Auditorium",
+        "city": "Johannesburg",
+        "province": "Gauteng"
       },
-      {
-        "name": "Victor Masondo",
-        "role": "soloist"
-      },
-      {
-        "name": "Lindi Ngonelo",
-        "role": "soloist"
-      },
-      {
-        "name": "Johannesburg Philharmonic Orchestra",
-        "role": "orchestra"
-      }
-    ],
-    "programme": [
-      {
-        "composer": "Duke Ellington",
-        "work": "Nutcracker Suite"
-      }
-    ],
-    "sa_content": {
-      "sa_composers": [],
-      "has_sa_work": false
-    },
-    "genre_tags": [
-      "orchestral",
-      "crossover"
-    ],
-    "tickets": {
-      "url": "https://www.quicket.co.za/events/392145-the-jpo-symphonic-jazz-concert-2026/",
-      "vendor": "quicket"
-    },
-    "status": "scheduled"
+      "status": "scheduled",
+      "price_tiers": [],
+      "ticket_url": "https://www.quicket.co.za/events/392145-the-jpo-symphonic-jazz-concert-2026/"
+    }
   }
 ]

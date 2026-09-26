@@ -13,7 +13,7 @@ import { redact } from "./log.ts";
 export class FatalLlmError extends Error {}
 
 export interface ExtractCallResult {
-  events: unknown[];
+  performances: unknown[];
   model: string;
   inputTokens: number;
   outputTokens: number;
@@ -120,8 +120,8 @@ async function callViaApi(opts: ExtractRequest): Promise<ExtractCallResult> {
   } catch (err) {
     throw new Error(`model returned non-JSON output (${cleaned.length} chars)`, { cause: err });
   }
-  const events = (parsed as { events?: unknown }).events;
-  if (!Array.isArray(events)) throw new Error("model output has no events array");
+  const performances = (parsed as { performances?: unknown }).performances;
+  if (!Array.isArray(performances)) throw new Error("model output has no performances array");
 
   const u = message.usage;
   const usage = {
@@ -131,7 +131,7 @@ async function callViaApi(opts: ExtractRequest): Promise<ExtractCallResult> {
     cacheWrite: u.cache_creation_input_tokens ?? 0,
   };
   return {
-    events,
+    performances,
     model: message.model,
     inputTokens: usage.input + usage.cacheRead + usage.cacheWrite,
     outputTokens: usage.output,
@@ -216,15 +216,15 @@ export async function callViaClaudeCode(opts: ExtractRequest): Promise<ExtractCa
     }
     throw new Error(`Claude Code: ${msg}`);
   }
-  const parsed = (r.structured_output ?? (r.result ? JSON.parse(r.result) : null)) as { events?: unknown } | null;
-  if (!parsed || !Array.isArray(parsed.events)) throw new Error("Claude Code output has no events array");
+  const parsed = (r.structured_output ?? (r.result ? JSON.parse(r.result) : null)) as { performances?: unknown } | null;
+  if (!parsed || !Array.isArray(parsed.performances)) throw new Error("Claude Code output has no performances array");
 
   const usage = Object.values(r.modelUsage ?? {}).reduce(
     (t, u) => ({ input: t.input + u.inputTokens, output: t.output + u.outputTokens, cacheRead: t.cacheRead + u.cacheReadInputTokens, cacheWrite: t.cacheWrite + u.cacheCreationInputTokens }),
     { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   );
   return {
-    events: parsed.events,
+    performances: parsed.performances,
     model: Object.keys(r.modelUsage ?? {})[0] ?? opts.model,
     inputTokens: usage.input + usage.cacheRead + usage.cacheWrite,
     outputTokens: usage.output,

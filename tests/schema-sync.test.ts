@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { PATHS } from "../src/lib/config.ts";
-import { Event } from "../src/lib/schema.ts";
+import { ExtractedPerformance } from "../src/lib/extraction-schema.ts";
 
 type Node = Record<string, unknown>;
 interface Shape {
@@ -11,11 +11,22 @@ interface Shape {
   required?: string[];
   properties?: Record<string, Shape>;
   items?: Shape;
+  variants?: Shape[];
 }
 
-/** Reduce a JSON Schema node to the parts both representations must agree on. */
+/**
+ * Reduce a JSON Schema node to the parts both representations must agree on.
+ * A union of objects (a Programme item is a Work or an interval) keeps each
+ * object variant apart; any other union (a nullable field) folds into one shape.
+ */
 function shape(node: Node): Shape {
-  const variants = (node.anyOf as Node[] | undefined) ?? [node];
+  const variants = ((node.anyOf ?? node.oneOf) as Node[] | undefined) ?? [node];
+  const objects = variants.filter((v) => v.type === "object");
+  if (objects.length > 1) {
+    const rest = variants.filter((v) => v.type !== "object");
+    const all = [...objects.map((o) => shape(o)), ...rest.map((r) => shape(r))];
+    return { types: [...new Set(all.flatMap((a) => a.types))].sort(), variants: all.sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))) };
+  }
   const types = new Set<string>();
   const enums = new Set<unknown>();
   let properties: Record<string, Shape> | undefined;
@@ -40,10 +51,10 @@ function shape(node: Node): Shape {
   };
 }
 
-describe("Zod schema mirrors event-schema.json", () => {
+describe("Zod extraction schema mirrors event-schema.json", () => {
   it("has the same properties, required lists, types and enums at every level", () => {
     const json = JSON.parse(fs.readFileSync(PATHS.eventSchema, "utf8")) as Node;
-    const zod = z.toJSONSchema(Event, { io: "input" }) as Node;
+    const zod = z.toJSONSchema(ExtractedPerformance, { io: "input" }) as Node;
     expect(shape(zod)).toEqual(shape(json));
   });
 });

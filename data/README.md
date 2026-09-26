@@ -10,7 +10,7 @@ Every record is derived: facts about a performance (date, venue, performers, pro
 
 | file | what | maintained by |
 |---|---|---|
-| `events.json` | Published events, one record per performance, sorted by start. Schema: [`../event-schema.json`](../event-schema.json). | pipeline |
+| `events.json` | Published events, one record per performance, sorted by start. Schema: v1's `Event` in [`../src/lib/schema.ts`](../src/lib/schema.ts). | pipeline |
 | `review-queue.json` | Events below the confidence threshold or with fields flagged for review. Not published. | pipeline |
 | `venues.json` | Canonical venue table: `venue_id`, name, aliases, city, province. | **by hand** |
 | `composers-sa.json` | South African composers. Drives `sa_content`. Matching is exact, never inferred. | **by hand** |

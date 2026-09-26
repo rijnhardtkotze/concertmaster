@@ -4,5 +4,5 @@
   "fetched_at": "2026-09-01T03:00:00+02:00",
   "document_type": "text",
   "snippet_of": "One entry of the data-events calendar JSON on https://cpo.org.za/concerts/ (fetched 2026-09-25), rendered by sources/cpo.ts",
-  "notes": "Calendar entry where the series is the title and the concert name is in the body. Tests: venue only implied by 'at the City Hall', 'J. Strauss II' vs 'R. Strauss' (disambiguated by initials, so both should resolve), no catalogue numbers stated (K. 491 must NOT be added from memory), no ticket info."
+  "notes": "Calendar entry where the Series is the title and the Production's own name is in the body. Tests: Venue only implied by 'at the City Hall', 'J. Strauss II' vs 'R. Strauss' (disambiguated by initials, so both should resolve), no catalogue numbers stated (K. 491 must NOT be added from memory), no ticket information, an instrumental Programme with no languages, and the CPO credited as the orchestra on its own calendar."
 }
