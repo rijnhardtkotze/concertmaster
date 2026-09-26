@@ -106,6 +106,7 @@ The existing stages keep their shape: fetch, extract, normalise, dedupe, review-
 
 - [ ] **CPO** works end to end: fetch, extract, merge, and a live Production page.
 - [ ] **Quicket** works end to end through its API. It carries the JPO and the Chamber Music Collective.
+- [ ] Quicket's API terms say nothing about republishing. I accepted that risk without asking Quicket. We store structured facts only, never organisers' descriptions or images.
 - [ ] The golden regression cases cover both sources and run in CI on the owner's pull requests.
 
 #### 6. Listings site
@@ -157,8 +158,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ## What is still open
 
-4. **How the site looks.** No design exists yet. A design pass before the site slice. Mine, with design. Blocks the site slice.
-5. **Quicket's terms.** Whether the API terms allow republishing listings under CC BY 4.0. Legal. Blocks go-live.
+1. **How the site looks.** No design exists yet. A design pass before the site slice. Mine, with design. Blocks the site slice.
 
 ## How the work is phased
 
