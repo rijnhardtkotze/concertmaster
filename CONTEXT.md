@@ -70,6 +70,10 @@ _Avoid_: State
 A Performance that has been missing from all its sources for three runs in a row. It is hidden from the site and noted in the Review issue, but never deleted.
 _Avoid_: Deleted, removed, expired
 
+**Price tier**:
+One named ticket price for a Performance, in rand, such as "Adults R225" or "Pensioners and students R200". A Performance has one or more.
+_Avoid_: Concession (as a record type), rate, fare
+
 **Upcoming**:
 A Performance whose start is at or after now. This is a view of the listings, not a rule about what is stored: Performances up to 7 days in the past are kept.
 _Avoid_: Future, current, live
