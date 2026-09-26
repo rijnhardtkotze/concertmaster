@@ -70,6 +70,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
 - [ ] Every Venue stores an address, city, province, a map location, and optional doors-open and parking notes. Unknown notes show as unconfirmed.
 - [ ] Every Performance has one or more Price tiers, each a name and an amount in rand. The diary shows the highest tier and the lowest beneath it.
+- [ ] A Programme is an ordered list of items. Each item is a Work or an interval with its length.
 - [ ] Every Production has one Genre from the fixed list in `CONTEXT.md`. Extraction picks it, and a Production it can't place goes to review.
 - [ ] The project stays on the Supabase Free plan. The nightly Action's daily writes keep it from pausing.
 - [ ] The nightly Action runs `supabase db dump` and keeps the dump in a Cloudflare R2 bucket. Free has no automatic backups.

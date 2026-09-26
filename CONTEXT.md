@@ -55,7 +55,7 @@ One canonical piece of music, identified by Composer, title and (where one exist
 _Avoid_: Piece, song, item
 
 **Programme**:
-The ordered list of Works a Production performs.
+The ordered list of Works a Production performs, with any intervals in their place.
 _Avoid_: Setlist, repertoire
 
 **Venue**:
