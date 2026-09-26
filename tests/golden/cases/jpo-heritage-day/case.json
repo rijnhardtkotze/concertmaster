@@ -4,5 +4,5 @@
   "fetched_at": "2026-09-01T03:00:00+02:00",
   "document_type": "html",
   "snippet_of": "https://jpo.co.za/heritage-day-symphonic-jazz/ (main content, fetched 2026-09-25; navigation and accessibility notes removed)",
-  "notes": "Clean English detail page. Tests: 24h time '19h00', canonical Venue from 'The Linder Auditorium', conductor vs soloists, locale en-ZA only for the two soloists the page calls South African, the presenting orchestra credited as an Ensemble, a Composer typo in the source ('Elington'), 'Works by' Composers with no Work named (no Programme item), vendor ticket URL with tracking params, and a marketing paragraph the description must not copy."
+  "notes": "Clean English detail page. Tests: 24h time '19h00', canonical Venue from 'The Linder Auditorium', conductor vs soloists, locale en-ZA only for the two soloists the page calls South African, the presenting orchestra and Victor Masondo's Quartet credited as Ensembles, a Composer typo in the source ('Elington'), 'Works by' Composers with no Work named (no Programme item), vendor ticket URL with tracking params, and a marketing paragraph the description must not copy."
 }
