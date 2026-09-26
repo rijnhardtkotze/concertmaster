@@ -138,10 +138,19 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 ### P1: fast follow after launch
 
+These sit in two milestones after v2 goes live.
+
+**v2.1: More sources**
+
 1. **The other ten Sources**, one vertical slice each: JPO direct, KZNPO, Symphony Choir of Johannesburg, Vox Chamber Choir, Artscape, Baxter, Webtickets, the Chamber Music Collective direct, Unisa Music Foundation and Old Nectar.
-2. **Structured data** (schema.org `MusicEvent`) on Production pages, for search engines.
+2. **New Sources** already asked for: Christ Church Concert Series (#5), VOX Cape Town (#7) and Pierneef Teater (#11).
 3. **A merge-Works action** to fold duplicate Works together, with alternative names.
-4. **A Season and Series page** per presenter.
+
+**v3: Site enhancements**
+
+1. **Structured data** (schema.org `MusicEvent`) on Production pages, for search engines.
+2. **A Season and Series page** per presenter.
+3. **Search, past concerts, Featured and Writing**, as tracked in #23.
 
 ### P2: design for, do not build
 
