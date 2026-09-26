@@ -64,7 +64,7 @@ The schema covers Production, Performance, Series, Season, Presenter, Ensemble, 
 
 - [ ] All tables are created by SQL migrations in `supabase/migrations/` (ADR 0015).
 - [ ] CI runs the migrations against a local Supabase stack with the tests. A merge to `v2` applies them to the production project `egturlxzxgyaugiyybqe`.
-- [ ] Row-level security is on for every table. The anon role can `select` only from the published views (ADR 0004).
+- [ ] Every table is in the `private` schema, with row-level security on. The anon role can `select` only from the Published views: materialised views in the `api` schema, the only schema the Data API exposes, refreshed at the end of every merge (ADR 0004, ADR 0016).
 - [ ] Presenter and Ensemble are separate tables that share a slug (ADR 0008).
 - [ ] Person is one table. Artist and Composer are roles on a Credit or a Work (glossary).
 - [ ] Slugs for Productions, Venues, Presenters and Ensembles never change once published.
@@ -135,6 +135,7 @@ An Astro static build reads the published views at build time (ADR 0004).
 
 - [ ] The v1 file pipeline stays paused. Postgres starts empty and fills from the first v2 run.
 - [ ] At go-live, `v2` takes `main` with `git merge -s ours origin/main` and `main` fast-forwards to `v2`.
+- [ ] The workflow that applies migrations and pushes `config.toml` moves its trigger from `v2` to `main` (ADR 0015, ADR 0016).
 - [ ] Dependabot drops `target-branch: v2` and follows the default branch again.
 - [ ] The README, `data/` and `data/LICENSE` are updated to match ADR 0011.
 
