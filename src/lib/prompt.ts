@@ -34,17 +34,18 @@ export interface DocumentHeader {
 export function documentBlock(h: DocumentHeader, text: string): string {
   const lines = [`SOURCE: ${h.source}`, `URL: ${h.url}`, `FETCHED_AT: ${h.fetchedAt}`, `DOCUMENT_TYPE: ${h.documentType}`];
   if (h.chunk && h.chunk.total > 1) {
-    lines.push(`CHUNK: ${h.chunk.index + 1} of ${h.chunk.total} (extract only events described in this chunk)`);
+    lines.push(`CHUNK: ${h.chunk.index + 1} of ${h.chunk.total} (extract only the Performances described in this chunk)`);
   }
   if (h.hint) lines.push(`SOURCE_NOTE: ${h.hint}`);
   return `${lines.join("\n")}\n\n---\n${text}`;
 }
 
 /**
- * The reference tables. Sent as the first, cacheable block of the user message:
- * identical across every call in a run, so it sits in the cached prefix
- * together with the system prompt.
+ * The reference block: the Venue table and `COMPOSERS_ZA`, the curated list of
+ * South African Composers, so the model keeps those names spelled as the list has
+ * them. Sent as the first, cacheable block of the user message: identical across
+ * every call in a run, so it sits in the cached prefix with the system prompt.
  */
-export function tablesBlock(venues: unknown[], composers: string[]): string {
-  return `VENUE_TABLE:\n${JSON.stringify(venues)}\n\nSA_COMPOSER_TABLE:\n${JSON.stringify(composers)}`;
+export function referenceBlock(venues: unknown[], composersZa: string[]): string {
+  return `VENUE_TABLE:\n${JSON.stringify(venues)}\n\nCOMPOSERS_ZA:\n${JSON.stringify(composersZa)}`;
 }

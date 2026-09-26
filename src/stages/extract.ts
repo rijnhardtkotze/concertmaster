@@ -6,7 +6,7 @@ import { copiedSpan, sourceShingles } from "../lib/guard.ts";
 import { docId } from "../lib/hash.ts";
 import { callExtractor, extractBackend, FatalLlmError } from "../lib/llm.ts";
 import { errorMessage, logger } from "../lib/log.ts";
-import { documentBlock, loadSystemPrompt, promptVersion, tablesBlock } from "../lib/prompt.ts";
+import { documentBlock, loadSystemPrompt, promptVersion, referenceBlock } from "../lib/prompt.ts";
 import { loadComposers, loadVenues, venuesForPrompt } from "../lib/reference.ts";
 import { loadSources, parseArgs, type SourceConfig } from "../lib/sources.ts";
 import { bump, loadManifest, loadSourceStatus, note, readDocText, writeStats, type ManifestEntry, type SourceRunStats } from "../lib/state.ts";
@@ -28,7 +28,9 @@ export function modelFor(source: Pick<SourceConfig, "model">, kind: ManifestEntr
 
 /**
  * Extract one document: chunk, call, merge arrays, apply the copyright guard.
- * Exported for the golden-set harness, which runs exactly this path.
+ * Exported for the golden-set harness, which runs exactly this path. Each record
+ * is one Performance in the v2 extraction shape (extraction-schema.ts); the
+ * description the guard checks is its Production's.
  */
 export async function extractDocument(
   ctx: ExtractContext,
@@ -38,7 +40,7 @@ export async function extractDocument(
 ) {
   const model = modelFor(doc.source, doc.kind);
   const chunks = chunkText(doc.text, EXTRACT.chunkChars);
-  const events: Record<string, unknown>[] = [];
+  const performances: Record<string, unknown>[] = [];
   for (let i = 0; i < chunks.length; i++) {
     const block = documentBlock(
       { source: doc.source.slug, url: doc.url, fetchedAt: doc.fetchedAt, documentType: doc.kind, hint: doc.source.hint, chunk: { index: i, total: chunks.length } },
@@ -47,18 +49,19 @@ export async function extractDocument(
     signal?.throwIfAborted();
     const r = await callExtractor({ model, system: ctx.system, tables: ctx.tables, document: block, signal });
     onCall?.(r);
-    events.push(...(r.events as Record<string, unknown>[]));
+    performances.push(...(r.performances as Record<string, unknown>[]));
   }
   const shingles = sourceShingles(doc.text);
   const guard_failures: ExtractedFile["guard_failures"] = [];
-  events.forEach((e, index) => {
-    const span = copiedSpan(e.description as string | null, shingles);
-    if (span) {
+  performances.forEach((p, index) => {
+    const production = p.production as Record<string, unknown> | null | undefined;
+    const span = copiedSpan((production?.description as string | null | undefined) ?? null, shingles);
+    if (span && production) {
       guard_failures.push({ index, reason: `description shares a 12-word span with the source ("${span.slice(0, 40)}…")` });
-      e.description = null; // never persist copied text
+      production.description = null; // never persist copied text
     }
   });
-  return { model, chunks: chunks.length, events, guard_failures };
+  return { model, chunks: chunks.length, performances, guard_failures };
 }
 
 /**
@@ -143,7 +146,7 @@ async function main() {
   const ctx: ExtractContext = {
     system,
     version: promptVersion(system),
-    tables: tablesBlock(venuesForPrompt(loadVenues()), loadComposers()),
+    tables: referenceBlock(venuesForPrompt(loadVenues()), loadComposers()),
   };
   const stats: Record<string, SourceRunStats> = {};
   let callsLeft = EXTRACT.maxCallsPerRun;
@@ -223,10 +226,10 @@ async function main() {
         prompt_version: ctx.version,
         extracted_at: nowIso(),
         chunks: r.chunks,
-        events: r.events,
+        events: r.performances,
         guard_failures: r.guard_failures,
       });
-      bump(stats, source.slug, "events_extracted", r.events.length);
+      bump(stats, source.slug, "events_extracted", r.performances.length);
       if (++done % 25 === 0) log.info(`${done} documents extracted so far`);
     } catch (err) {
       if (err instanceof FatalLlmError) throw err;

@@ -23,7 +23,7 @@ import { sha256 } from "../../src/lib/hash.ts";
 import { readJson, writeJson } from "../../src/lib/json.ts";
 import { hasExtractCredentials } from "../../src/lib/llm.ts";
 import { normaliseEvent } from "../../src/lib/normalise.ts";
-import { loadSystemPrompt, promptVersion, tablesBlock } from "../../src/lib/prompt.ts";
+import { loadSystemPrompt, promptVersion, referenceBlock } from "../../src/lib/prompt.ts";
 import { ComposerIndex, loadComposers, loadVenues, VenueIndex, venuesForPrompt } from "../../src/lib/reference.ts";
 import type { Event } from "../../src/lib/schema.ts";
 import { loadSources, parseArgs, type SourceConfig } from "../../src/lib/sources.ts";
@@ -73,7 +73,7 @@ async function main() {
   const system = loadSystemPrompt();
   const version = promptVersion(system);
   const venuesList = loadVenues();
-  const ctx = { system, version, tables: tablesBlock(venuesForPrompt(venuesList), loadComposers()) };
+  const ctx = { system, version, tables: referenceBlock(venuesForPrompt(venuesList), loadComposers()) };
   const venues = new VenueIndex(venuesList);
   const composers = new ComposerIndex(loadComposers());
   const previous = readJson<Results | null>(LATEST, null);
@@ -98,7 +98,7 @@ async function main() {
         guard = new Map();
       } else {
         const r = await extractDocument(ctx, { source, url: meta.url, kind: meta.document_type, fetchedAt: meta.fetched_at, text });
-        raw = r.events;
+        raw = r.performances;
         guard = new Map(r.guard_failures.map((g) => [g.index, g.reason]));
       }
 

@@ -1,22 +1,13 @@
 import { z } from "zod";
+import { PROVINCES } from "./extraction-schema.ts";
 
 /**
- * Zod mirror of event-schema.json. The JSON Schema is the contract; this file
- * must agree with it, and tests/schema-sync.test.ts fails if property names,
- * required lists or enums drift apart.
+ * v1's stored listing record, which normalise, dedupe and merge still use until
+ * their v2 tickets rewrite them. event-schema.json no longer describes it: that
+ * file is now the v2 extraction shape, mirrored by extraction-schema.ts.
  */
 
-export const PROVINCES = [
-  "Gauteng",
-  "Western Cape",
-  "KwaZulu-Natal",
-  "Eastern Cape",
-  "Free State",
-  "Limpopo",
-  "Mpumalanga",
-  "North West",
-  "Northern Cape",
-] as const;
+export { PROVINCES };
 
 export const PERFORMER_ROLES = [
   "conductor",
@@ -140,5 +131,5 @@ export const Event = z.strictObject({
 
 export type Event = z.infer<typeof Event>;
 
-/** Top-level key order for committed output: the order of event-schema.json. */
+/** Top-level key order for committed output. */
 export const EVENT_KEY_ORDER = Object.keys(Event.shape) as (keyof Event)[];

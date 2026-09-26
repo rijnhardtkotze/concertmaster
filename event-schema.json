@@ -1,192 +1,431 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://classicalmusic.co.za/schema/event.json",
-  "title": "SA Classical Event",
-  "description": "One performance at one venue at one date and time. A three-night run is three records.",
+  "$id": "https://concertmaster.co.za/schema/extracted-performance.json",
+  "title": "Extracted Performance",
+  "description": "One Performance as the model extracts it from one source document, with the fields of its Production alongside. A three-night run is three records that share their production fields. The pipeline computes everything else: identity keys, slugs, Venue resolution and which Composers are South African.",
   "type": "object",
-  "required": ["id", "dedupe_key", "title", "start", "venue", "source", "confidence", "status"],
-  "additionalProperties": false,
   "properties": {
-    "id": {
-      "type": "string",
-      "description": "Stable slug: sha256(dedupe_key) truncated to 16 hex chars. Never regenerate for an existing event."
-    },
-    "dedupe_key": {
-      "type": "string",
-      "description": "Lowercase, punctuation-stripped: {date_YYYY-MM-DD}|{venue_slug}|{normalised_title_first_6_words}. Used for cross-source matching before fuzzy fallback."
-    },
-
-    "title": { "type": "string", "minLength": 3 },
-    "subtitle": { "type": ["string", "null"] },
-    "description": {
-      "type": ["string", "null"],
-      "description": "Max 400 chars. Summary in own words, NOT copied blurb text. Copyright: never reproduce the publisher's marketing copy verbatim."
-    },
-
-    "start": {
-      "type": "string",
-      "format": "date-time",
-      "description": "ISO 8601 with explicit +02:00 offset. South Africa has no DST, so the offset is always +02:00."
-    },
-    "end": { "type": ["string", "null"], "format": "date-time" },
-    "doors": { "type": ["string", "null"], "format": "date-time" },
-    "duration_minutes": { "type": ["integer", "null"], "minimum": 10, "maximum": 600 },
-
-    "venue": {
+    "production": {
       "type": "object",
-      "required": ["name", "city", "province"],
-      "additionalProperties": false,
       "properties": {
-        "venue_id": { "type": ["string", "null"], "description": "Slug from the canonical venue table, e.g. 'linder-auditorium'." },
-        "name": { "type": "string" },
-        "address": { "type": ["string", "null"] },
-        "city": { "type": "string" },
-        "province": {
+        "title": {
           "type": "string",
-          "enum": ["Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape", "Free State", "Limpopo", "Mpumalanga", "North West", "Northern Cape"]
+          "minLength": 1,
+          "description": "The Production's own name, not its Series."
         },
-        "lat": { "type": ["number", "null"] },
-        "lng": { "type": ["number", "null"] }
-      }
-    },
-
-    "presenter": {
-      "type": ["string", "null"],
-      "description": "The organisation putting it on, canonicalised. E.g. 'Johannesburg Philharmonic Orchestra', not 'the JPO'."
-    },
-    "series": {
-      "type": ["string", "null"],
-      "description": "E.g. 'CPO Symphony Season 2026', 'Johannesburg International Mozart Festival 2026'."
-    },
-
-    "performers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["name", "role"],
-        "additionalProperties": false,
-        "properties": {
-          "name": { "type": "string" },
-          "role": {
-            "type": "string",
-            "enum": ["conductor", "soloist", "orchestra", "ensemble", "choir", "chorus_master", "director", "narrator", "accompanist", "other"]
-          },
-          "instrument": {
-            "type": ["string", "null"],
-            "description": "For soloists and accompanists. Includes voice types: soprano, mezzo-soprano, contralto, countertenor, tenor, baritone, bass."
-          },
-          "is_south_african": {
-            "type": ["boolean", "null"],
-            "description": "Only true when the source states it or it is unambiguous from a known-artist table. Otherwise null. Do not guess from surname."
-          }
-        }
-      }
-    },
-
-    "programme": {
-      "type": "array",
-      "description": "Works to be performed, in stated order. Empty array is valid and common.",
-      "items": {
-        "type": "object",
-        "required": ["composer", "work"],
-        "additionalProperties": false,
-        "properties": {
-          "composer": {
-            "type": "string",
-            "description": "Canonical full name where confidently known: 'Ludwig van Beethoven', not 'Beethoven'. If ambiguous (e.g. bare 'Bach', 'Strauss'), keep the source form and add to needs_review."
-          },
-          "work": { "type": "string" },
-          "catalogue": { "type": ["string", "null"], "description": "Op. 67, BWV 1043, K. 466, D. 759." },
-          "movements": { "type": ["string", "null"], "description": "If only excerpts are performed." },
-          "is_premiere": {
-            "type": ["string", "null"],
-            "enum": ["world", "african", "south_african", "regional", null]
-          },
-          "arranger": { "type": ["string", "null"] }
-        }
-      }
-    },
-
-    "sa_content": {
-      "type": "object",
-      "description": "The local-is-lekker index. Drives the 'South African works' filter, which is the site's differentiator.",
-      "additionalProperties": false,
-      "properties": {
-        "sa_composers": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Composers on the programme matched against the SA composer table. Match only, never infer."
+        "genre": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "chamber",
+                "orchestral",
+                "recital",
+                "choral",
+                "vocal",
+                "contemporary",
+                "early_music"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Null when no one Genre fits."
         },
-        "has_sa_work": { "type": "boolean" },
+        "series": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "season": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "presenter": {
+          "description": "The organisation putting the Production on, by its full name.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "languages": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "For vocal programmes: Afrikaans, isiXhosa, isiZulu, Sesotho, English, German, Italian, Latin, French, Russian, Czech."
-        }
-      }
-    },
-
-    "genre_tags": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": ["orchestral", "chamber", "choral", "opera", "solo_recital", "song_recital", "early_music", "contemporary", "organ", "wind_band", "sacred", "youth", "masterclass", "competition", "crossover", "film_music"]
-      }
-    },
-
-    "tickets": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "url": { "type": ["string", "null"], "format": "uri" },
-        "vendor": {
-          "type": ["string", "null"],
-          "enum": ["quicket", "webtickets", "computicket", "howler", "direct", "at_door", "other", null]
+          "items": {
+            "type": "string"
+          },
+          "description": "Languages the Production is sung or performed in, as the source states. Empty for instrumental programmes."
         },
-        "currency": { "type": "string", "const": "ZAR" },
-        "price_min": { "type": ["number", "null"], "minimum": 0 },
-        "price_max": { "type": ["number", "null"], "minimum": 0 },
-        "is_free": { "type": ["boolean", "null"] },
-        "concessions_note": { "type": ["string", "null"], "description": "E.g. 'students R80, pensioners R120'." },
-        "booking_required": { "type": ["boolean", "null"] }
-      }
+        "description": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 400
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "A summary in your own words, 400 characters or fewer. Never the source's copy."
+        },
+        "credits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "person",
+                  "ensemble"
+                ]
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "conductor",
+                  "soloist",
+                  "orchestra",
+                  "ensemble",
+                  "choir",
+                  "chorus_master",
+                  "director",
+                  "narrator",
+                  "accompanist",
+                  "other"
+                ]
+              },
+              "instrument": {
+                "description": "For soloists and accompanists, including voice types such as soprano or baritone.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "locale": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "en-ZA"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "en-ZA only when the source says this Person is South African. Otherwise null. Always null for an Ensemble."
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "role",
+              "instrument",
+              "locale"
+            ],
+            "additionalProperties": false,
+            "description": "A Person or Ensemble credited on the Production, with the role they play."
+          }
+        },
+        "programme": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "work"
+                  },
+                  "composer": {
+                    "description": "Canonical full name where unambiguous. A bare ambiguous surname stays as written.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "catalogue": {
+                    "description": "Op. 67, BWV 1043, K. 466, D. 759. Only when the source gives it.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "movements": {
+                    "description": "Only when excerpts are performed.",
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "arranger": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "premiere": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "world",
+                          "african",
+                          "za",
+                          "regional"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Only when the source states a premiere."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "composer",
+                  "title",
+                  "catalogue",
+                  "movements",
+                  "arranger",
+                  "premiere"
+                ],
+                "additionalProperties": false,
+                "description": "A Work on the Programme."
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "interval"
+                  },
+                  "minutes": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 240
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "minutes"
+                ],
+                "additionalProperties": false,
+                "description": "An interval, in its place on the Programme."
+              }
+            ]
+          },
+          "description": "In the order the source gives. Empty when the source names no Works."
+        }
+      },
+      "required": [
+        "title",
+        "genre",
+        "series",
+        "season",
+        "presenter",
+        "languages",
+        "description",
+        "credits",
+        "programme"
+      ],
+      "additionalProperties": false
     },
-
-    "source": {
+    "performance": {
       "type": "object",
-      "required": ["url", "publisher", "fetched_at"],
-      "additionalProperties": false,
       "properties": {
-        "url": { "type": "string", "format": "uri", "description": "Canonical page for this event. Always link out; never republish full copy." },
-        "publisher": { "type": "string", "description": "Source slug, e.g. 'jpo', 'artscape', 'quicket'." },
-        "fetched_at": { "type": "string", "format": "date-time" },
-        "content_hash": { "type": "string", "description": "sha256 of the raw source document. Skip the LLM call when unchanged." },
-        "secondary_urls": { "type": "array", "items": { "type": "string", "format": "uri" } }
-      }
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "YYYY-MM-DD, South African Standard Time."
+        },
+        "start_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "HH:MM, 24-hour, South African Standard Time. Null when the source gives no time."
+        },
+        "doors_time": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "venue": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "address": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "city": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "province": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "Gauteng",
+                    "Western Cape",
+                    "KwaZulu-Natal",
+                    "Eastern Cape",
+                    "Free State",
+                    "Limpopo",
+                    "Mpumalanga",
+                    "North West",
+                    "Northern Cape"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "name",
+            "address",
+            "city",
+            "province"
+          ],
+          "additionalProperties": false
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "scheduled",
+            "few_left",
+            "sold_out",
+            "postponed",
+            "cancelled"
+          ]
+        },
+        "price_tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "description": "As the source names the tier, such as \"Adults\" or \"Pensioners and students\"."
+              },
+              "amount": {
+                "type": "number",
+                "minimum": 0,
+                "description": "In rand. Free entry is 0."
+              }
+            },
+            "required": [
+              "name",
+              "amount"
+            ],
+            "additionalProperties": false,
+            "description": "One named ticket price."
+          },
+          "description": "Empty when the source gives no price."
+        },
+        "ticket_url": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "start_date",
+        "start_time",
+        "doors_time",
+        "venue",
+        "status",
+        "price_tiers",
+        "ticket_url"
+      ],
+      "additionalProperties": false
     },
-
-    "status": {
-      "type": "string",
-      "enum": ["scheduled", "postponed", "cancelled", "sold_out", "unconfirmed"]
-    },
-
     "confidence": {
       "type": "number",
       "minimum": 0,
       "maximum": 1,
-      "description": "Extractor's own confidence. Below 0.75 routes to the review queue rather than publishing."
+      "description": "Honest probability that every non-null field is correct as published."
     },
     "needs_review": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Dotted field paths the extractor is unsure about, e.g. ['start', 'programme.1.composer']."
+      "items": {
+        "type": "string"
+      },
+      "description": "Dotted paths of uncertain fields, such as performance.start_time or production.programme.1.composer."
     },
     "extraction_notes": {
-      "type": ["string", "null"],
-      "description": "One line, for the human reviewer only. Never rendered on the site."
-    },
-
-    "first_seen": { "type": "string", "format": "date-time" },
-    "last_updated": { "type": "string", "format": "date-time" }
-  }
+      "description": "One line for the reviewer. Never shown on the site.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "production",
+    "performance",
+    "confidence",
+    "needs_review",
+    "extraction_notes"
+  ],
+  "additionalProperties": false
 }
