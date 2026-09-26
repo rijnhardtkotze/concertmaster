@@ -27,6 +27,8 @@ The site's build is not affected. It still reads the published views over supaba
 
 Which Postgres client library to use, and which pooler mode, are left to the ticket that adds the connection.
 
+ADR 0001 also says, in its considered options, that the pipeline connects with the service key. That aside is replaced here too. ADR 0001's decision itself, Postgres as the source of truth and Supabase as Postgres only, still holds, so it is not superseded.
+
 ## Considered Options
 
 - **A direct Postgres connection over the pooler** (chosen).
