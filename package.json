@@ -32,24 +32,24 @@
     "pre-commit": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/claude-code": "^2.1.282",
+    "@anthropic-ai/claude-code": "^2.1.312",
     "@anthropic-ai/sdk": "^0.128.0",
     "cheerio": "^1.2.0",
     "domhandler": "^6.0.1",
     "robots-parser": "^3.0.1",
     "unpdf": "^1.8.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.2",
-    "eslint": "^10.11.0",
-    "globals": "^17.12.0",
+    "@types/node": "^26.6.6",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
     "simple-git-hooks": "^2.14.0",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1",
-    "vitest": "^5.0.1"
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.0.5"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
